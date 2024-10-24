@@ -1,0 +1,118 @@
+<html>
+
+<head>
+    <title>Akantares</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <style>
+        body {
+            background-color: #f0f0f0;
+        }
+
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0
+        }
+		
+		body {
+			font-family: sans-serif;
+		}
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+			min-width: 320px;
+			min-height: 240px;
+        }
+    }
+    </style>
+	<link id='akantaresIcon' rel="icon" href="BITMAP/1.ico"></link>
+</head>
+
+<body>
+            
+    <div id="canvas-container">
+		Direction:
+		<input type="range" min="0" max="450" value="360" class="slider" id="fireRange" style='margin: 5px'>
+		<button id='fireButton' onclick='game.fire()' style='visibility: visible; margin: 5px'>Fire</button>
+		<br>
+        <canvas id="game-canvas" style='image-rendering: pixelated'></canvas>
+    </div>
+
+	<script src="akantares.js"></script>
+    <script src="akantares-ui.js"></script>
+
+    <script>
+			window.scale = 1;
+			window.width = 320;
+			window.height = 240;
+			window.fps = 60;
+			
+            const canvasContainer = document.getElementById("canvas-container");
+            const gameCanvas = document.getElementById("game-canvas");
+			gameCanvas.focus();
+            gameCanvas.width = scale*width;
+            gameCanvas.height = scale*height;
+			if('ontouchstart' in window){
+				const touchCanvas = document.createElement('canvas');
+				touchCanvas.id = 'touch-canvas';
+				touchCanvas.width = scale*width;
+				touchCanvas.height = scale*height;
+				touchCanvas.style.imageRendering = 'pixelated';
+				<!-- touchCanvas.style.borderStyle = 'solid'; -->
+				<!-- touchCanvas.style.borderWidth = '1px'; -->
+				canvasContainer.appendChild(touchCanvas);
+			}
+			const touchCanvas = document.getElementById('touch-canvas');
+            const ui = new GameUI(gameCanvas, touchCanvas);
+			const game = new Game();
+			ui.setGame(game);
+			setInterval(game.update.bind(game), 1000/fps);
+
+			window.keysBeingPressed = {
+			'ArrowLeft': false,
+			'ArrowRight': false,
+			'ArrowUp': false,
+			'ArrowDown': false,
+			'Escape': false,
+			' ': false,
+			'f': false,
+			'g': false,
+			'k': false,
+			'z': false
+			};
+			
+            document.addEventListener('keyup', (e) => {
+				keysBeingPressed[e.key] = false;
+			}, true);
+			
+            document.addEventListener('keydown', (e) => {
+				keysBeingPressed[e.key] = true;
+            }, true);
+			
+			
+			function getMousePosition(canvas, event) {
+				let rect = canvas.getBoundingClientRect();
+				let x = event.clientX - rect.left;
+				let y = event.clientY - rect.top;
+				return [x, y];
+			}
+			
+			document.addEventListener('input', (e) => {
+				game.playerAngle = document.getElementById('fireRange').value;
+            }, true);
+			
+			document.addEventListener('visibilitychange', function() {
+				if (document.visibilityState != 'visible') {
+					window.audioContext.suspend();
+					game.gameState = 'escmenu';
+				}
+			});			
+    </script>
+</body>
+
+</html>

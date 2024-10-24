@@ -38,7 +38,7 @@
 			this.previousGameState = 'startscreen';
 			this.keyHasBeenPressed = {horizontal:0, vertical:0};
 			
-			this.score = [1,2];
+			this.score = [0,0];
 			
 			this.justStartedPlaying = true; //for the 'are you ready' sound effect
 			
@@ -59,10 +59,10 @@
 			this.enemyCatapultVel = {x:0, y:0};
 			this.enemyCatapultAcc = {x:0, y:0};
 			this.enemyTrail = [];
-			this.planets = []; //planets, not planetsPos, becase i'll also encode size in this (m=0 or 1)
+			this.planets = []; //planets, not planetsPos, becase i'll also encode size in this (m=0 or 1), as well as hits endured
 			this.numPlanets = 1+Math.floor(3*Math.random());
 			for(let i=0; i<this.numPlanets; i++){
-				this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3)};
+				this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3), h:0};
 			}
 			
         
@@ -70,42 +70,46 @@
 		}
 		
 		fire(){
-			console.log('fire');
-			ui.frameCount = 0;
-			
-			this.playerCatapultVel.x = this.initCatapultSpeed*Math.cos(this.playerAngle*Math.PI/180);
-			this.playerCatapultPos.x = this.playerPos.x + 10*Math.cos(this.playerAngle*Math.PI/180);
-			this.playerCatapultVel.y = this.initCatapultSpeed*Math.sin(this.playerAngle*Math.PI/180);
-			this.playerCatapultPos.y = this.playerPos.y + 10*Math.sin(this.playerAngle*Math.PI/180);
+			this.resetStuff('trail');
+			this.resetStuff('shot');
 							
 			this.gameSubState = 'flying';
 			document.getElementById('fireRange').style.visibility = 'hidden';
-			document.getElementById('fireButton').disabled = true;			
+			document.getElementById('fireButton').disabled = true;
 		}
 		
-		resetStuff(){ //make a separate resetGame and resetForNextLevel and reset after shot?
-			this.score = 0;
-			this.playerPos = {x:window.width/2, y:window.height-20-16/2};
-			this.playerCurPos = {x:window.width/2, y:window.height-20-16/2};
-			this.playerVel = {x:0, y:0};
-			this.playerAcc = {x:0, y:0};
-			for(let i=0; i<7; i++){
-				this.playerSegPos[i] = {x:window.width/2, y:window.height-20-16/2};
-				this.playerSegVel[i] = {x:0, y:0};
-				this.playerSegAcc[i] = {x:0, y:0};
+		resetStuff(arg){ //make a separate resetGame and resetForNextLevel and reset after shot?
+			switch(arg){
+				case 'trail':
+					this.playerTrail = [];
+					this.enemyTrail = [];
+					break;
+					
+				case 'gameover':
+					this.score = [0,0];
+					this.resetStuff('trail');
+					this.planets = [];
+					this.numPlanets = 1+Math.floor(3*Math.random());
+					for(let i=0; i<this.numPlanets; i++){
+						this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3), h:0};
+					}
+					break;
+				
+				case 'shot':
+					this.playerCatapultVel.x = this.initCatapultSpeed*Math.cos(this.playerAngle*Math.PI/180);
+					this.playerCatapultPos.x = this.playerPos.x + 10*Math.cos(this.playerAngle*Math.PI/180);
+					this.playerCatapultVel.y = this.initCatapultSpeed*Math.sin(this.playerAngle*Math.PI/180);
+					this.playerCatapultPos.y = this.playerPos.y + 10*Math.sin(this.playerAngle*Math.PI/180);
+					this.enemyAngle = 360;
+					this.enemyCatapultVel.x = this.initCatapultSpeed*Math.cos(this.enemyAngle*Math.PI/180);
+					this.enemyCatapultPos.x = this.enemyPos.x + 10*Math.cos(this.enemyAngle*Math.PI/180);
+					this.enemyCatapultVel.y = this.initCatapultSpeed*Math.sin(this.enemyAngle*Math.PI/180);
+					this.enemyCatapultPos.y = this.enemyPos.y + 10*Math.sin(this.enemyAngle*Math.PI/180);
+				break;
 			}
-			this.sparklePos = {x:window.width/2, y:window.height-20-16/2};
-			this.sparklePosPrev = {x:window.width/2, y:window.height-20-16/2};
-			this.sparkleVel = {x:0, y:0};
-			this.sparkleAcc = {x:0, y:0};
-			this.lemonPos = {x:72+48/2, y:16+48/2};
-			this.lemonVel = {x:10, y:0};
-			this.paw0Pos = {x:146, y:211};
-			this.paw1Pos = {x:186, y:216};
 			ui.frameCount = 0;
-			this.lastCollision = -100;
-			this.lemonIdleTime = 0;
 		}
+		
 		
         update() {
 			
@@ -136,13 +140,13 @@
 							
 						case 'flying':
 						
-							//bullet ('catapult') movement
+							//player bullet ('catapult') movement
 					
 							this.playerCatapultAcc.x = 0;							
 							//respite frames disable the effect of gravity of the player for a bit at the beginning so that the catapult doesn't just get stuck orbiting the player
 							if(ui.frameCount>this.respiteFrames) {this.playerCatapultAcc.x -= this.G*(this.playerCatapultPos.x-this.playerPos.x)*dist2(this.playerCatapultPos.x-this.playerPos.x, this.playerCatapultPos.y-this.playerPos.y, 10)**-3;} //the dz=10 is to make sure it's always some distance away from the planet, to avoid singularities
 							this.playerCatapultAcc.x -= this.G*(this.playerCatapultPos.x-this.enemyPos.x)*dist2(this.playerCatapultPos.x-this.enemyPos.x, this.playerCatapultPos.y-this.enemyPos.y, 10)**-3;
-							for(let i=0; i<this.numPlanets; i++){
+							for(let i=0; i<this.planets.length; i++){
 								this.playerCatapultAcc.x -= this.G*(1+this.planets[i].m)*(this.playerCatapultPos.x-this.planets[i].x)*dist2(this.playerCatapultPos.x-this.planets[i].x, this.playerCatapultPos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 							}
 							this.playerCatapultVel.x += this.dt*this.playerCatapultAcc.x;
@@ -151,65 +155,64 @@
 							this.playerCatapultAcc.y = 0;							
 							if(ui.frameCount>this.respiteFrames) {this.playerCatapultAcc.y -= this.G*(this.playerCatapultPos.y-this.playerPos.y)*dist2(this.playerCatapultPos.x-this.playerPos.x, this.playerCatapultPos.y-this.playerPos.y, 10)**-3;}
 							this.playerCatapultAcc.y -= this.G*(this.playerCatapultPos.y-this.enemyPos.y)*dist2(this.playerCatapultPos.x-this.enemyPos.x, this.playerCatapultPos.y-this.enemyPos.y, 10)**-3;
-							for(let i=0; i<this.numPlanets; i++){
+							for(let i=0; i<this.planets.length; i++){
 								this.playerCatapultAcc.y -= this.G*(1+this.planets[i].m)*(this.playerCatapultPos.y-this.planets[i].y)*dist2(this.playerCatapultPos.x-this.planets[i].x, this.playerCatapultPos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 							}
 							this.playerCatapultVel.y += this.dt*this.playerCatapultAcc.y;
 							this.playerCatapultPos.y += this.dt*this.playerCatapultVel.y;
 							
-							if(ui.frameCount%10 == 0){
+							if(ui.frameCount%14 == 0){
 								this.playerTrail.push({x:this.playerCatapultPos.x, y:this.playerCatapultPos.y});
+							}
+							
+							//enemy bullet movement
+							
+							
+							//collisions
+					
+							//playerCatapult - enemy
+							if(!this.debugInvulnerability){
+								if(abs(this.playerCatapultPos.x-this.enemyPos.x)<10 && abs(this.playerCatapultPos.y-this.enemyPos.y)<10){
+									// ui.se[5].play();
+									this.score[0] += 1;
+									this.gameSubState = 'collided';
+								}
+								
+								for(let i=0; i<this.planets.length; i++){
+									if(abs(this.playerCatapultPos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.playerCatapultPos.y-this.planets[i].y)<10+4*this.planets[i].m){
+										this.planets[i].h += 1;
+										this.gameSubState = 'collided';
+									}
+								}
 							}
 					
 							break;
 							
 						case 'collided':
+							
+							this.planets = this.planets.filter((p)=>p.h-p.m<2);
+							
+							document.getElementById('fireRange').style.visibility = 'visible';
+							document.getElementById('fireButton').disabled = false;
+							
+							if(this.score[0] == 5 && this.score[1] == 5){
+								this.gameSubState = 'draw';
+							}
+							else if(this.score[0] == 5){
+								this.gameSubState = 'win';
+							}
+							else if(this.score[1] == 5){
+								this.gameSubState = 'lose';
+							}
+							else{
+								this.gameSubState = 'ready';
+							}
+			
 							break;
 					}
 					
 					break;
 					
-					//pawprint movement
-					//still not sure of the mechanics of this
-					if(ui.frameCount>this.respiteFrames){//they're inactive for a bit at the beginning
-						if(ui.frameCount % this.pawPeriod == 0){
-							switch((ui.frameCount/this.pawPeriod)%4){
-								case 0:
-									this.paw0Pos = {x:window.width*2, y:window.height*2}; //move it off-screen so it 'disappears'
-									ui.se[2].play();
-									break;
-								case 1:
-									this.paw0Pos.x = this.sparklePos.x;
-									this.paw0Pos.y = this.sparklePos.y;
-									break;
-								case 2:
-									this.sparklePosPrev.x = this.sparklePos.x;
-									this.sparklePosPrev.y = this.sparklePos.y;
-									this.paw1Pos = {x:window.width*2, y:window.height*2};
-									ui.se[2].play();
-									break;
-								case 3:
-									this.paw1Pos.x = this.sparklePosPrev.x;
-									this.paw1Pos.y = this.sparklePosPrev.y;
-									break;
-								default:
-									break;
-							}
-						}
-					}
-					
-					
-					//collisions
-					
-					//playerTail-pawPrint
-					if(!this.debugInvulnerability && ui.frameCount>this.respiteFrames){
-						if((abs(this.playerSegPos[6].x-this.paw0Pos.x)<28/2 && abs(this.playerSegPos[6].y-this.paw0Pos.y)<28/2) || (abs(this.playerSegPos[6].x-this.paw1Pos.x)<28/2 && abs(this.playerSegPos[6].y-this.paw1Pos.y)<28/2)){
-							ui.se[5].play();
-							if(this.score > this.highscore){this.highscore = this.score;}
-							this.gameState = 'gameover';
-							this.previousGameState = 'gameover';
-						}
-					}
 					
 					//player-wall
 					// if((this.playerCurPos.x < 20) || (this.playerCurPos.x > window.width-20)){
@@ -368,6 +371,14 @@
 						if(this.score > this.highscore){this.highscore = this.score;}
 						this.gameState = 'gameover';
 						this.previousGameState = 'gameover';
+					}
+					if(this.gameSubState == 'win' || this.gameSubState == 'loss'){
+						if(ekeys[' ']){
+							this.resetStuff('gameover');
+							this.gameState = 'playing';
+							this.gameSubState = 'ready';
+							this.previousGameState = 'playing';
+						}
 					}
 					
 					break;

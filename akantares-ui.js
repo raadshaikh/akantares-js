@@ -312,7 +312,7 @@ WINMARK`.split('\n');
 					this.ctx.drawImage(this.bmps['CATAPULT'], 4*(this.frameCount%2 && this.game.gameSubState=='ready')+1, 1, 3, 3, this.game.playerPos.x+10*Math.cos(this.game.playerAngle*Math.PI/180)-3/2, this.game.playerPos.y+10*Math.sin(this.game.playerAngle*Math.PI/180)-3/2, 3, 3);
 					this.ctx.drawImage(this.bmps['CATAPULT'], 1, 1, 3, 3, this.game.enemyPos.x+10*Math.cos(this.game.enemyAngle*Math.PI/180)-3/2, this.game.enemyPos.y+10*Math.sin(this.game.enemyAngle*Math.PI/180)-3/2, 3, 3);
 					
-					for(let i=0; i<this.game.numPlanets; i++){
+					for(let i=0; i<this.game.planets.length; i++){
 						let m_i = this.game.planets[i].m;
 						this.ctx.drawImage(this.bmps['PLANET'], 0,32+16*m_i, 16+8*m_i,16+8*m_i, this.game.planets[i].x-8-4*m_i, this.game.planets[i].y-8-4*m_i, 16+8*m_i,16+8*m_i)
 					}
@@ -325,17 +325,25 @@ WINMARK`.split('\n');
 						this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.playerCatapultPos.x-3/2, this.game.playerCatapultPos.y-3/2, 3, 3);
 					}
 					
+					if(this.game.gameSubState == 'ready'){
+						this.drawString(14, 218, 'Please Take your shot'+'.'.repeat(this.frameCount/30%4));
+					}
+					
+					if(['win', 'lose', 'draw'].includes(this.game.gameSubState)){
+						this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);
+					}
+					
 					this.frameCount += 1;
 					break;
 				
 				case 'gameover':
-					if(!this.bgm2_playing){
-						this.stop_bgm();
-						this.play_bgm(2);
-						this.bgm2_playing = true;
-					}
+					// if(!this.bgm2_playing){
+						// this.stop_bgm();
+						// this.play_bgm(2);
+						// this.bgm2_playing = true;
+					// }
 					
-					this.ctx.drawImage(this.bmp_jiljil, 64, 36, 64, 12, 48, 48, 64, 12); //'push space'
+					// this.ctx.drawImage(this.bmp_jiljil, 64, 36, 64, 12, 48, 48, 64, 12); //'push space'
 					break;
 					
 				case 'escmenu':
@@ -356,7 +364,7 @@ WINMARK`.split('\n');
 						this.ctx.filter = 'none';
 					}
 					if(this.game.help){
-						this.drawString(0,window.height/2,"GOAL: Hit the lemon to earn points, while making\n      sure the pawprints following you don't catch\n      your tail!\n\nPress ESC for pause menu.\nPress Z to toggle 2x zoom.\n\nJiLJiL (c) 1997, Studio Pixel\nBrowser version by IdioticBaka1824");
+						this.drawString(0,window.height/2,"GOAL: Set your aim and fire at your opponent,   \n      while avoiding obstacles!\n      Remember, all objects on screen have gravity.\n\nPress ESC for pause menu.\nPress Z to toggle 2x zoom.\n\nAkantares (c) 2009, Studio Pixel\nBrowser version by IdioticBaka1824");
 					}
 					break;
 					

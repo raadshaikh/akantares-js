@@ -54,6 +54,7 @@ MISSILE
 NAMEPLATE
 PLANET
 RESULT
+STARTSCREEN
 THREE
 TITLE
 WINMARK`.split('\n');
@@ -66,14 +67,20 @@ WINMARK`.split('\n');
 			
 			this.frameCount = 0;
 			
-			this.bgm1_url = new URL('https://raadshaikh.github.io/jiljil-js/WAVE/BGM1.wav');
-			this.bgm1 = new Audio(this.bgm1_url);
-			this.bgm1.crossOrigin = "anonymous";
-			this.bgm1_playing = false;
-			this.bgm2_url = new URL('https://raadshaikh.github.io/jiljil-js/WAVE/BGM2.wav');
-			this.bgm2 = new Audio(this.bgm2_url);
-			this.bgm2.crossOrigin = "anonymous";
-			this.bgm2_playing = false;
+			const bgm_names = `STARTSCREEN
+READY
+FLYING
+WIN
+LOSE
+GAMEOVER`.split('\n');
+			this.bgms = {};
+			this.bgmURLs = {};
+			for(const i in bgm_names){
+				this.bgmURLS[bgm_names[i]] = new URL('https://raadshaikh.github.io/akantares-js/WAVE/BGM_'+bgm_names[i]+'.wav');
+				this.bgms[bgm_names[i]] = new Audio(this.bgmURLs[bgm_names[i]]);
+				this.bgms[bgm_names[i]].crossOrigin = 'anonymous';
+				this.bgms[bgm_names[i]].playing = false;
+			}
 			
 			const sfx_names = `CANCEL
 ERROR
@@ -84,27 +91,28 @@ OK
 READY
 SELECT
 THREE`.split('\n');
-			this.sfx = {};
+			this.sfxs = {};
 			for(const i in sfx_names){
 				this.sfxs[sfx_names[i]] = new Audio(new URL('https://raadshaikh.github.io/akantares-js/WAVE/PTN_'+sfx_names[i]+'.wav'));
 			}
+			this.muteSFX = {}; //so they don't play repeatedly. will reset using resetStuff in the other script.
 			
 			window.audioContext = new AudioContext();
 			this.buffer = 0;
 			this.source = 0;
         }
 		
-        async loadAudio(val) {
+        async loadAudio(bgmName) {
 			  try {
-				const response = await fetch(val==1?this.bgm1_url:this.bgm2_url);
+				const response = await fetch(this.bgmURLs[bgmName]);
 				// Decode it
 				this.buffer = await window.audioContext.decodeAudioData(await response.arrayBuffer());
 			  } catch (err) {
 				console.error(`Unable to fetch the audio file. Error: ${err.message}`);
 			  }
 		}
-        async play_bgm(val){
-				await this.loadAudio(val);
+        async play_bgm(bgmName){
+				await this.loadAudio(bgmName);
 				this.source = window.audioContext.createBufferSource();
 				this.source.loop = true;
 				this.source.buffer = this.buffer;
@@ -113,8 +121,7 @@ THREE`.split('\n');
 		}
 		async stop_bgm(){
 			if(this.source){
-				this.bgm1_playing = false;
-				this.bgm2_playing = false;
+				// for(let bgmName in bgm_names){this.bgms[bgmName]_playing = false;} //???
 				this.source.stop();
 				}
 		}
@@ -285,25 +292,9 @@ THREE`.split('\n');
 					
 				case 'startscreen':
 					this.stop_bgm();
-					if(this.frameCount==24){this.se[7].play();}
-					if(this.frameCount>56){
-						this.ctx.drawImage(this.bmp_jiljil, 88, 64, 36, 20, 124, 50, 36, 20); //'JiL'
-						this.ctx.drawImage(this.bmp_jiljil, 88, 64, 36, 20, 124+36, 50, 36, 20); //'JiL'
-					}
-					if(this.frameCount==56){this.se[8].play();}
-					if(this.frameCount>90){
-						this.ctx.drawImage(this.bmp_jiljil, 80, 24, 48, 8, 137, 119, 48, 8); //'1997-10-xx'
-					}
-					if(this.frameCount==90){this.se[9].play();}
-					if(this.frameCount>125){
-						this.ctx.drawImage(this.bmp_jiljil, 64, 102, 56, 10, 132, 139, 56, 10); //'Tortoiseshell'
-					}
-					if(this.frameCount==125){this.se[10].play();}
-					if(this.frameCount>172){
-						this.ctx.drawImage(this.bmp_jiljil, 64, 36, 64, 12, 130, 164, 64, 12); //'Push Space'
-					}
-					if(this.frameCount==172){this.se[11].play();}
-					this.frameCount += 1;
+					this.play_bgm('STARTSCREEN');
+					this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240);
+					this.drawString(126, window.height-20, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					break;
 					
 				
@@ -353,6 +344,9 @@ THREE`.split('\n');
 					}
 					
 					if(this.game.gameSubState == 'countdown'){
+						if(this.frameCount%(0.5*window.fps)==0 && this.frameCount!=0){
+							this.sfxs['THREE'].play();
+						}
 						this.ctx.drawImage(this.bmps['THREE'], 16*(~~(this.frameCount/(0.5*window.fps))-1), 0, 16, 16, window.width/2-16/2, window.height/2-16/2, 16, 16);
 					}
 					
@@ -367,17 +361,23 @@ THREE`.split('\n');
 							let h_i = this.game.planets[i].h;
 							//exploding planet animation. i'm a little bummed at how there's no nice way to let this animation play and extend this into the next shot a little bit, like it does in the game. oh well.
 							if(h_i-m_i>=2){
+								if(!this.muteSFX['EXPLODE']){this.sfxs['EXPLODE'].play();}
+								this.muteSFX['EXPLODE'] = true;
 								for(let j=0; j<5; j++){ //5 exploding bits
 									this.ctx.drawImage(this.bmps['PLANET'], 64,32+8*(this.frameCount%10<5), 8,8, this.game.planets[i].x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2), this.game.planets[i].y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2), 8,8);
 								}
 							}
 						}
 						if(this.game.playerPos.h){
+							if(!this.muteSFX['EXPLODE']){this.sfxs['EXPLODE'].play();}
+							this.muteSFX['EXPLODE'] = true;
 							for(let j=0; j<5; j++){
 								this.ctx.drawImage(this.bmps['PLANET'], 32,32+8*(this.frameCount%10<5), 8,8, this.game.playerPos.x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2)-8/2, this.game.playerPos.y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2)-8/2, 8,8);
 							}
 						}
 						if(this.game.enemyPos.h){
+							if(!this.muteSFX['EXPLODE']){this.sfxs['EXPLODE'].play();}
+							this.muteSFX['EXPLODE'] = true;
 							for(let j=0; j<5; j++){
 								this.ctx.drawImage(this.bmps['PLANET'], 48,32+8*(this.frameCount%10<5), 8,8, this.game.enemyPos.x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2)-8/2, this.game.enemyPos.y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2)-8/2, 8,8);
 							}
@@ -401,7 +401,6 @@ THREE`.split('\n');
 						this.ctx.stroke();
 					}
 					
-					this.frameCount += 1;
 					break;
 				
 				case 'gameover':
@@ -411,13 +410,10 @@ THREE`.split('\n');
 						// this.bgm2_playing = true;
 					// }
 					
-					// this.ctx.drawImage(this.bmp_jiljil, 64, 36, 64, 12, 48, 48, 64, 12); //'push space'
 					break;
 					
 				case 'escmenu':
-					// this.bgm1.pause();
-					// this.bgm2.pause();
-					// this.ctx.drawImage(this.bmp_escape, 0, 0, 80, 16, 8, 8, 80, 16); //pause screen
+					for(let bgmName in bgm_names){this.bgms[bgmName].pause();}
 					this.drawString(0,0,'CONTINUE:F');
 					this.drawString(0,8,'RESET   :G');
 					this.drawString(0,16,'HELP    :H');
@@ -439,6 +435,9 @@ THREE`.split('\n');
 				default:
 					break;
 			}
+			
+			this.frameCount += 1;
+			
         }
     }
 

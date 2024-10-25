@@ -31,8 +31,8 @@
 	
     class Game {
         constructor() {
-			this.gameState = 'loading'; //loading, startscreen, playing, escmenu, gameover
-			this.gameSubState = 'null'; //if gameState == 'playing', this can be 'ready', 'countdown', 'flying', or 'collided'. otherwise it is 'null'.
+			this.gameState = 'loading'; //loading, startscreen, playing, escmenu, gameover. actually, no startscreen or gameover
+			this.gameSubState = 'null'; //if gameState == 'playing', this can be 'ready', 'countdown', 'flying', 'collided', 'win','lose','draw'. otherwise it is 'null'.
 			this.level = 0;
 			this.help = false;
 			this.previousGameState = 'loading';
@@ -44,8 +44,8 @@
 			
 			this.dt = 0.05; //time step for integrating motion
 			this.G = 3000; //universal gravitational constant
-			this.initCatapultSpeed = 12;
-			this.respiteFrames = 90; //# of frames at beginning when player gravity is disabled
+			this.initCatapultSpeed = 14;
+			this.respiteFrames = 30; //# of frames at beginning when player gravity is disabled
 			this.fadeoutDuration = 0.2;
 			
 			this.playerName = 'debugName';
@@ -80,6 +80,7 @@
 		
 		fire(){
 			if(!this.justStartedPlaying){ //otherwise firing will cause the nameplates to re-popup
+				ui.sfxs['OK'].play();
 				this.resultString = '';
 				this.resetStuff('trail');
 				this.resetStuff('shot');
@@ -92,6 +93,7 @@
 		}
 		
 		resetStuff(arg){ //make a separate resetGame and resetForNextLevel and reset after shot? yeah, make reset thingies for various cases
+			for(let sfxName in ui.muteSFX){ui.muteSFX[sfxName]=false;}
 			switch(arg){
 				case 'trail':
 					this.playerTrail = [];
@@ -236,8 +238,7 @@
 								
 								//playerMissile - enemy
 								if(abs(this.playerMissilePos.x-this.enemyPos.x)<10 && abs(this.playerMissilePos.y-this.enemyPos.y)<10){
-									// ui.se[5].play();
-									if(!this.playerCollided){this.score[0] += 1;} //if not for this condition, the score would keep increasing
+									if(!this.playerCollided){this.score[0] += 1; ui.sfxs['HIT'].play();} //if not for this condition, the score would keep increasing
 									this.enemyPos.h = true;
 									this.playerCollided = true;
 									if(this.resultString=='player_1hit'){this.resultString = '2hit';}
@@ -245,8 +246,8 @@
 								}
 								//enemyMissile - enemy
 								if(abs(this.enemyMissilePos.x-this.enemyPos.x)<10 && abs(this.enemyMissilePos.y-this.enemyPos.y)<10){
-									// ui.se[5].play();
-									if(!this.enemyCollided){this.score[0] += 1;} //if not for this condition, the score would keep increasing
+									
+									if(!this.enemyCollided){this.score[0] += 1; ui.sfxs['HIT'].play();}
 									this.enemyPos.h = true;
 									this.enemyCollided = true;
 									if(this.resultString=='player_1hit'){this.resultString = '2hit';}
@@ -254,8 +255,8 @@
 								}
 								//enemyMissile - player
 								if(abs(this.enemyMissilePos.x-this.playerPos.x)<10 && abs(this.enemyMissilePos.y-this.playerPos.y)<10){
-									// ui.se[5].play();
-									if(!this.enemyCollided){this.score[1] += 1;}
+									
+									if(!this.enemyCollided){this.score[1] += 1; ui.sfxs['HIT'].play();}
 									this.playerPos.h = true;
 									this.enemyCollided = true;
 									if(this.resultString=='enemy_1hit'){this.resultString = '2hit';}
@@ -263,8 +264,8 @@
 								}
 								//playerMissile - player
 								if(abs(this.playerMissilePos.x-this.playerPos.x)<10 && abs(this.playerMissilePos.y-this.playerPos.y)<10){
-									// ui.se[5].play();
-									if(!this.playerCollided){this.score[1] += 1;}
+									
+									if(!this.playerCollided){this.score[1] += 1; ui.sfxs['HIT'].play();}
 									this.playerPos.h = true;
 									this.playerCollided = true;
 									if(this.resultString=='enemy_1hit'){this.resultString = '2hit';}
@@ -274,7 +275,7 @@
 								//playerMissile - planets
 								for(let i=0; i<this.planets.length; i++){
 									if(abs(this.playerMissilePos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.playerMissilePos.y-this.planets[i].y)<10+4*this.planets[i].m){
-										if(!this.playerCollided){this.planets[i].h += 1;}
+										if(!this.playerCollided){this.planets[i].h += 1; ui.sfxs['HIT'].play();}
 										this.playerCollided = true;
 										if(this.resultString==''){this.resultString = 'miss';}
 									}
@@ -282,7 +283,7 @@
 								//enemyMissile - planets
 								for(let i=0; i<this.planets.length; i++){
 									if(abs(this.enemyMissilePos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.enemyMissilePos.y-this.planets[i].y)<10+4*this.planets[i].m){
-										if(!this.enemyCollided){this.planets[i].h += 1;}
+										if(!this.enemyCollided){this.planets[i].h += 1; ui.sfxs['HIT'].play();}
 										this.enemyCollided = true;
 										if(this.resultString==''){this.resultString = 'miss';}
 									}
@@ -367,35 +368,37 @@
 				case 'loading':
 					if(ekeys[' ']){
 						ekeys[' ']=false;
-						this.gameState = 'playing'; //!! change back to startscreen or something later
-						this.gameSubState = 'ready';
-						this.previousGameState = 'playing';
+						this.gameState = 'startscreen';
+						this.gameSubState = 'null';
+						this.previousGameState = 'startscreen';
 					}
 					break;
 				case 'startscreen':
 					if(ekeys[' ']){
-						this.resetStuff();
+						ekeys[' ']=false;
+						this.resetStuff('gameover');
 						window.audioContext.resume();
 						this.gameState = 'playing';
+						this.gameSubState = 'ready';
 						this.previousGameState = 'playing';
 					}
 					break;
 				
 				case 'playing':
-					if(ui.frameCount>this.respiteFrames*0.7){
+					// if(ui.frameCount>this.respiteFrames*0.7){
 						// if(ekeys['ArrowLeft']){
 							// this.keyHasBeenPressed.horizontal = -1;
 						// }
 						// if(ekeys["ArrowRight"]){
 							// this.keyHasBeenPressed.horizontal = 1;
 						// }
-						if(ekeys["ArrowUp"]){
-							this.keyHasBeenPressed.vertical = -1;
-						}
-						if(ekeys["ArrowDown"]){
-							this.keyHasBeenPressed.vertical = 1;
-						}
-					}
+						// if(ekeys["ArrowUp"]){
+							// this.keyHasBeenPressed.vertical = -1;
+						// }
+						// if(ekeys["ArrowDown"]){
+							// this.keyHasBeenPressed.vertical = 1;
+						// }
+					// }
 					if(ekeys['k']){
 						ui.se[5].play();
 						if(this.score > this.highscore){this.highscore = this.score;}
@@ -430,7 +433,7 @@
 				
 				case 'gameover':
 					if(ekeys[' ']){
-						this.resetStuff();
+						this.resetStuff('gameover');
 						this.gameState = 'playing';
 						this.previousGameState = 'playing';
 					}

@@ -35,76 +35,107 @@
 			this.gameSubState = 'null'; //if gameState == 'playing', this can be 'ready', 'countdown', 'flying', or 'collided'. otherwise it is 'null'.
 			this.level = 0;
 			this.help = false;
-			this.previousGameState = 'startscreen';
+			this.previousGameState = 'loading';
 			this.keyHasBeenPressed = {horizontal:0, vertical:0};
 			
 			this.score = [0,0];
 			
-			this.justStartedPlaying = true; //for the 'are you ready' sound effect
+			this.justStartedPlaying = true;
 			
-			this.dt = 0.05;
-			this.G = 3000;
+			this.dt = 0.05; //time step for integrating motion
+			this.G = 3000; //universal gravitational constant
 			this.initCatapultSpeed = 12;
 			this.respiteFrames = 90; //# of frames at beginning when player gravity is disabled
+			this.fadeoutDuration = 0.2;
 			
+			this.playerName = 'debugName';
+			// this.playerName = window.prompt('Name: ');
 			this.playerAngle = 360;
-			this.playerPos = {x:40, y:window.height/2};
-			this.playerCatapultPos = {x:this.playerPos.x+10*Math.cos(this.playerAngle*Math.PI/180), y:this.playerPos.y+10*Math.sin(this.playerAngle*Math.PI/180)};
-			this.playerCatapultVel = {x:0, y:0};
-			this.playerCatapultAcc = {x:0, y:0};
+			this.playerPos = {x:40, y:window.height/2, h:false}; //h for whether it's been hit
+			this.playerMissilePos = {x:this.playerPos.x+10*Math.cos(this.playerAngle*Math.PI/180), y:this.playerPos.y+10*Math.sin(this.playerAngle*Math.PI/180)};
+			this.playerMissileVel = {x:0, y:0};
+			this.playerMissileAcc = {x:0, y:0};
 			this.playerTrail = [];
-			this.enemyAngle = 360;
-			this.enemyPos = {x:256, y:window.height/2};
-			this.enemyCatapultPos = {x:this.enemyPos.x+10*Math.cos(this.enemyAngle*Math.PI/180), y:this.enemyPos.y+10*Math.sin(this.enemyAngle*Math.PI/180)};
-			this.enemyCatapultVel = {x:0, y:0};
-			this.enemyCatapultAcc = {x:0, y:0};
+			this.playerCollided = false; //whether or not player's missile has collided with something
+			this.enemyAngle = 360*Math.random();
+			this.enemyPos = {x:256, y:window.height/2, h:false};
+			this.enemyMissilePos = {x:this.enemyPos.x+10*Math.cos(this.enemyAngle*Math.PI/180), y:this.enemyPos.y+10*Math.sin(this.enemyAngle*Math.PI/180)};
+			this.enemyMissileVel = {x:0, y:0};
+			this.enemyMissileAcc = {x:0, y:0};
 			this.enemyTrail = [];
-			this.planets = []; //planets, not planetsPos, becase i'll also encode size in this (m=0 or 1), as well as hits endured
-			this.numPlanets = 1+Math.floor(3*Math.random());
-			for(let i=0; i<this.numPlanets; i++){
-				this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3), h:0};
-			}
+			this.enemyCollided = false;
+			
+			this.resultString = '';
+			
+			// this.planets = []; //planets, not planetsPos, becase i'll also encode size in this (m=0 or 1), as well as hits endured
+			// this.numPlanets = 1+Math.floor(4*Math.random());
+			// for(let i=0; i<this.numPlanets; i++){
+				// this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3), h:0};
+			// }
+			this.resetStuff('planets');
 			
         
 			this.debugInvulnerability = false;
 		}
 		
 		fire(){
-			this.resetStuff('trail');
-			this.resetStuff('shot');
-							
-			this.gameSubState = 'flying';
-			document.getElementById('fireRange').style.visibility = 'hidden';
-			document.getElementById('fireButton').disabled = true;
+			if(!this.justStartedPlaying){ //otherwise firing will cause the nameplates to re-popup
+				this.resultString = '';
+				this.resetStuff('trail');
+				this.resetStuff('shot');
+				
+				this.gameSubState = 'countdown';
+				ui.frameCount=0;
+				document.getElementById('fireRange').style.visibility = 'hidden';
+				document.getElementById('fireButton').disabled = true;
+			}
 		}
 		
-		resetStuff(arg){ //make a separate resetGame and resetForNextLevel and reset after shot?
+		resetStuff(arg){ //make a separate resetGame and resetForNextLevel and reset after shot? yeah, make reset thingies for various cases
 			switch(arg){
 				case 'trail':
 					this.playerTrail = [];
 					this.enemyTrail = [];
 					break;
 					
-				case 'gameover':
-					this.score = [0,0];
+				case 'planets':
 					this.resetStuff('trail');
 					this.planets = [];
-					this.numPlanets = 1+Math.floor(3*Math.random());
+					this.numPlanets = 1+Math.floor(4*Math.random());
 					for(let i=0; i<this.numPlanets; i++){
 						this.planets[i] = {x:60+160*Math.random(), y:12+200*Math.random(), m:(Math.random()<0.3), h:0};
 					}
 					break;
+					
+				case 'gameover':
+					this.score = [0,0];
+					this.resetStuff('trail');
+					this.resetStuff('planets');
+					this.justStartedPlaying = true;
+					break;
 				
 				case 'shot':
-					this.playerCatapultVel.x = this.initCatapultSpeed*Math.cos(this.playerAngle*Math.PI/180);
-					this.playerCatapultPos.x = this.playerPos.x + 10*Math.cos(this.playerAngle*Math.PI/180);
-					this.playerCatapultVel.y = this.initCatapultSpeed*Math.sin(this.playerAngle*Math.PI/180);
-					this.playerCatapultPos.y = this.playerPos.y + 10*Math.sin(this.playerAngle*Math.PI/180);
-					this.enemyAngle = 360;
-					this.enemyCatapultVel.x = this.initCatapultSpeed*Math.cos(this.enemyAngle*Math.PI/180);
-					this.enemyCatapultPos.x = this.enemyPos.x + 10*Math.cos(this.enemyAngle*Math.PI/180);
-					this.enemyCatapultVel.y = this.initCatapultSpeed*Math.sin(this.enemyAngle*Math.PI/180);
-					this.enemyCatapultPos.y = this.enemyPos.y + 10*Math.sin(this.enemyAngle*Math.PI/180);
+					this.playerMissileVel.x = this.initCatapultSpeed*Math.cos(this.playerAngle*Math.PI/180);
+					this.playerMissilePos.x = this.playerPos.x + 10*Math.cos(this.playerAngle*Math.PI/180);
+					this.playerMissileVel.y = this.initCatapultSpeed*Math.sin(this.playerAngle*Math.PI/180);
+					this.playerMissilePos.y = this.playerPos.y + 10*Math.sin(this.playerAngle*Math.PI/180);
+					this.enemyAngle = 360*Math.random();
+					this.enemyMissileVel.x = this.initCatapultSpeed*Math.cos(this.enemyAngle*Math.PI/180);
+					this.enemyMissilePos.x = this.enemyPos.x + 10*Math.cos(this.enemyAngle*Math.PI/180);
+					this.enemyMissileVel.y = this.initCatapultSpeed*Math.sin(this.enemyAngle*Math.PI/180);
+					this.enemyMissilePos.y = this.enemyPos.y + 10*Math.sin(this.enemyAngle*Math.PI/180);
+					
+					this.playerPos.h = false;
+					this.enemyPos.h = false;
+					this.playerCollided = false;
+					this.enemyCollided = false;
+					
+					if(this.resultString.slice(-3)=='hit'){this.resetStuff('planets');}
+					this.planets = this.planets.filter((p)=>p.h-p.m<2);
+					
+					document.getElementById('fireRange').style.visibility = 'visible';
+					document.getElementById('fireButton').disabled = false;
+								
 				break;
 			}
 			ui.frameCount = 0;
@@ -129,176 +160,174 @@
 						// ui.se[6].play();
 						// this.justStartedPlaying = false;
 					// }
+					if(ui.frameCount>1.5*window.fps){
+						this.justStartedPlaying = false;
+					}
 										
 					switch(this.gameSubState){
 						
 						case 'ready':
+							this.playerAngle = document.getElementById('fireRange').value;
 							break;
 							
 						case 'countdown':
+							if(ui.frameCount > 2*window.fps){
+								this.resultString = ''; //putting this here instead of in the reset function so that the ui script knows what happened last and can decide whether or not to fade-in
+								this.gameSubState = 'flying';
+								ui.frameCount=0;
+							}
 							break;
 							
 						case 'flying':
 						
-							//player bullet ('catapult') movement
-					
-							this.playerCatapultAcc.x = 0;							
-							//respite frames disable the effect of gravity of the player for a bit at the beginning so that the catapult doesn't just get stuck orbiting the player
-							if(ui.frameCount>this.respiteFrames) {this.playerCatapultAcc.x -= this.G*(this.playerCatapultPos.x-this.playerPos.x)*dist2(this.playerCatapultPos.x-this.playerPos.x, this.playerCatapultPos.y-this.playerPos.y, 10)**-3;} //the dz=10 is to make sure it's always some distance away from the planet, to avoid singularities
-							this.playerCatapultAcc.x -= this.G*(this.playerCatapultPos.x-this.enemyPos.x)*dist2(this.playerCatapultPos.x-this.enemyPos.x, this.playerCatapultPos.y-this.enemyPos.y, 10)**-3;
-							for(let i=0; i<this.planets.length; i++){
-								this.playerCatapultAcc.x -= this.G*(1+this.planets[i].m)*(this.playerCatapultPos.x-this.planets[i].x)*dist2(this.playerCatapultPos.x-this.planets[i].x, this.playerCatapultPos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+							//player missile movement
+							//bigger planets are treated twice as heavy
+							if(!this.playerCollided){
+								this.playerMissileAcc.x = 0;
+								//respite frames disable the effect of gravity of the player for a bit at the beginning so that the catapult doesn't just get stuck orbiting the player
+								if(ui.frameCount>this.respiteFrames) {this.playerMissileAcc.x -= this.G*(this.playerMissilePos.x-this.playerPos.x)*dist2(this.playerMissilePos.x-this.playerPos.x, this.playerMissilePos.y-this.playerPos.y, 10)**-3;} //the dz=10 is to make sure it's always some distance away from the planet, to avoid singularities
+								this.playerMissileAcc.x -= this.G*(this.playerMissilePos.x-this.enemyPos.x)*dist2(this.playerMissilePos.x-this.enemyPos.x, this.playerMissilePos.y-this.enemyPos.y, 10)**-3;
+								for(let i=0; i<this.planets.length; i++){
+									this.playerMissileAcc.x -= this.G*(1+this.planets[i].m)*(this.playerMissilePos.x-this.planets[i].x)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+								}
+								this.playerMissileVel.x += this.dt*this.playerMissileAcc.x;
+								this.playerMissilePos.x += this.dt*this.playerMissileVel.x;
+								
+								this.playerMissileAcc.y = 0;
+								if(ui.frameCount>this.respiteFrames) {this.playerMissileAcc.y -= this.G*(this.playerMissilePos.y-this.playerPos.y)*dist2(this.playerMissilePos.x-this.playerPos.x, this.playerMissilePos.y-this.playerPos.y, 10)**-3;}
+								this.playerMissileAcc.y -= this.G*(this.playerMissilePos.y-this.enemyPos.y)*dist2(this.playerMissilePos.x-this.enemyPos.x, this.playerMissilePos.y-this.enemyPos.y, 10)**-3;
+								for(let i=0; i<this.planets.length; i++){
+									this.playerMissileAcc.y -= this.G*(1+this.planets[i].m)*(this.playerMissilePos.y-this.planets[i].y)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+								}
+								this.playerMissileVel.y += this.dt*this.playerMissileAcc.y;
+								this.playerMissilePos.y += this.dt*this.playerMissileVel.y;
 							}
-							this.playerCatapultVel.x += this.dt*this.playerCatapultAcc.x;
-							this.playerCatapultPos.x += this.dt*this.playerCatapultVel.x;
-							
-							this.playerCatapultAcc.y = 0;							
-							if(ui.frameCount>this.respiteFrames) {this.playerCatapultAcc.y -= this.G*(this.playerCatapultPos.y-this.playerPos.y)*dist2(this.playerCatapultPos.x-this.playerPos.x, this.playerCatapultPos.y-this.playerPos.y, 10)**-3;}
-							this.playerCatapultAcc.y -= this.G*(this.playerCatapultPos.y-this.enemyPos.y)*dist2(this.playerCatapultPos.x-this.enemyPos.x, this.playerCatapultPos.y-this.enemyPos.y, 10)**-3;
-							for(let i=0; i<this.planets.length; i++){
-								this.playerCatapultAcc.y -= this.G*(1+this.planets[i].m)*(this.playerCatapultPos.y-this.planets[i].y)*dist2(this.playerCatapultPos.x-this.planets[i].x, this.playerCatapultPos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+							//enemy missile movement
+							if(!this.enemyCollided){
+								this.enemyMissileAcc.x = 0;
+								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.x -= this.G*(this.enemyMissilePos.x-this.enemyPos.x)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
+								this.enemyMissileAcc.x -= this.G*(this.enemyMissilePos.x-this.playerPos.x)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
+								for(let i=0; i<this.planets.length; i++){
+									this.enemyMissileAcc.x -= this.G*(1+this.planets[i].m)*(this.enemyMissilePos.x-this.planets[i].x)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+								}
+								this.enemyMissileVel.x += this.dt*this.enemyMissileAcc.x;
+								this.enemyMissilePos.x += this.dt*this.enemyMissileVel.x;
+								
+								this.enemyMissileAcc.y = 0;
+								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.y -= this.G*(this.enemyMissilePos.y-this.enemyPos.y)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
+								this.enemyMissileAcc.y -= this.G*(this.enemyMissilePos.y-this.playerPos.y)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
+								for(let i=0; i<this.planets.length; i++){
+									this.enemyMissileAcc.y -= this.G*(1+this.planets[i].m)*(this.enemyMissilePos.y-this.planets[i].y)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+								}
+								this.enemyMissileVel.y += this.dt*this.enemyMissileAcc.y;
+								this.enemyMissilePos.y += this.dt*this.enemyMissileVel.y;
 							}
-							this.playerCatapultVel.y += this.dt*this.playerCatapultAcc.y;
-							this.playerCatapultPos.y += this.dt*this.playerCatapultVel.y;
 							
-							if(ui.frameCount%14 == 0){
-								this.playerTrail.push({x:this.playerCatapultPos.x, y:this.playerCatapultPos.y});
+							if(ui.frameCount%15 == 0){
+								this.playerTrail.push({x:this.playerMissilePos.x, y:this.playerMissilePos.y});
+								this.enemyTrail.push({x:this.enemyMissilePos.x, y:this.enemyMissilePos.y});
 							}
 							
-							//enemy bullet movement
 							
 							
 							//collisions
 					
-							//playerCatapult - enemy
-							if(!this.debugInvulnerability){
-								if(abs(this.playerCatapultPos.x-this.enemyPos.x)<10 && abs(this.playerCatapultPos.y-this.enemyPos.y)<10){
+							if(!this.debugInvulnerability && ui.frameCount>this.respiteFrames){
+								
+								//playerMissile - enemy
+								if(abs(this.playerMissilePos.x-this.enemyPos.x)<10 && abs(this.playerMissilePos.y-this.enemyPos.y)<10){
 									// ui.se[5].play();
-									this.score[0] += 1;
-									this.gameSubState = 'collided';
+									if(!this.playerCollided){this.score[0] += 1;} //if not for this condition, the score would keep increasing
+									this.enemyPos.h = true;
+									this.playerCollided = true;
+									if(this.resultString=='player_1hit'){this.resultString = '2hit';}
+									else{this.resultString='enemy_1hit'}
+								}
+								//enemyMissile - enemy
+								if(abs(this.enemyMissilePos.x-this.enemyPos.x)<10 && abs(this.enemyMissilePos.y-this.enemyPos.y)<10){
+									// ui.se[5].play();
+									if(!this.enemyCollided){this.score[0] += 1;} //if not for this condition, the score would keep increasing
+									this.enemyPos.h = true;
+									this.enemyCollided = true;
+									if(this.resultString=='player_1hit'){this.resultString = '2hit';}
+									else{this.resultString='enemy_1hit'}
+								}
+								//enemyMissile - player
+								if(abs(this.enemyMissilePos.x-this.playerPos.x)<10 && abs(this.enemyMissilePos.y-this.playerPos.y)<10){
+									// ui.se[5].play();
+									if(!this.enemyCollided){this.score[1] += 1;}
+									this.playerPos.h = true;
+									this.enemyCollided = true;
+									if(this.resultString=='enemy_1hit'){this.resultString = '2hit';}
+									else{this.resultString='player_1hit'}
+								}
+								//playerMissile - player
+								if(abs(this.playerMissilePos.x-this.playerPos.x)<10 && abs(this.playerMissilePos.y-this.playerPos.y)<10){
+									// ui.se[5].play();
+									if(!this.playerCollided){this.score[1] += 1;}
+									this.playerPos.h = true;
+									this.playerCollided = true;
+									if(this.resultString=='enemy_1hit'){this.resultString = '2hit';}
+									else{this.resultString='player_1hit'}
 								}
 								
+								//playerMissile - planets
 								for(let i=0; i<this.planets.length; i++){
-									if(abs(this.playerCatapultPos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.playerCatapultPos.y-this.planets[i].y)<10+4*this.planets[i].m){
-										this.planets[i].h += 1;
-										this.gameSubState = 'collided';
+									if(abs(this.playerMissilePos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.playerMissilePos.y-this.planets[i].y)<10+4*this.planets[i].m){
+										if(!this.playerCollided){this.planets[i].h += 1;}
+										this.playerCollided = true;
+										if(this.resultString==''){this.resultString = 'miss';}
 									}
+								}
+								//enemyMissile - planets
+								for(let i=0; i<this.planets.length; i++){
+									if(abs(this.enemyMissilePos.x-this.planets[i].x)<10+4*this.planets[i].m && abs(this.enemyMissilePos.y-this.planets[i].y)<10+4*this.planets[i].m){
+										if(!this.enemyCollided){this.planets[i].h += 1;}
+										this.enemyCollided = true;
+										if(this.resultString==''){this.resultString = 'miss';}
+									}
+								}
+								
+								if(ui.frameCount > 15*window.fps){
+									if(!this.playerCollided && !this.enemyCollided){this.resultString = 'miss';}
+									this.playerCollided = true;
+									this.enemyCollided = true;
+								}
+								
+								if(this.playerCollided && this.enemyCollided){
+									this.gameSubState = 'collided';
+									if(this.resultString.slice(-3)=='hit'){this.resultString=this.resultString.slice(-4);}
+									ui.frameCount = 0;
 								}
 							}
 					
 							break;
 							
 						case 'collided':
-							
-							this.planets = this.planets.filter((p)=>p.h-p.m<2);
-							
-							document.getElementById('fireRange').style.visibility = 'visible';
-							document.getElementById('fireButton').disabled = false;
-							
-							if(this.score[0] == 5 && this.score[1] == 5){
-								this.gameSubState = 'draw';
-							}
-							else if(this.score[0] == 5){
-								this.gameSubState = 'win';
-							}
-							else if(this.score[1] == 5){
-								this.gameSubState = 'lose';
-							}
-							else{
-								this.gameSubState = 'ready';
+							if(ui.frameCount>3*window.fps){
+								this.playerCollided = false;
+								this.enemyCollided = false;
+								
+								if(this.score[0] == 5 && this.score[1] == 5){
+									this.gameSubState = 'draw';
+								}
+								else if(this.score[0] == 5){
+									this.gameSubState = 'win';
+								}
+								else if(this.score[1] == 5){
+									this.gameSubState = 'lose';
+								}
+								else{
+									this.resetStuff('shot');
+									this.gameSubState = 'ready';
+									ui.frameCount = 0;
+									if(this.resultString=='1hit' || this.resultString=='2hit'){ui.frameCount = -this.fadeoutDuration*window.fps;} //for the fade-in animation. to let the ui script know, i'm encoding this info in the fact that the frame counter is negative.
+								}
 							}
 			
 							break;
 					}
-					
-					break;
-					
-					
-					//player-wall
-					// if((this.playerCurPos.x < 20) || (this.playerCurPos.x > window.width-20)){
-						// this.playerCurPos.x = clamp(this.playerCurPos.x, 20, window.width-20);
-					// }
-					// if((this.playerCurPos.y < 20) || (this.playerCurPos.y > window.height-20)){
-						// this.playerCurPos.y = clamp(this.playerCurPos.y, 20, window.height-20);
-					// }
-					if((this.playerPos.x < 20+16/2 && this.playerVel.x<0) || (this.playerPos.x > window.width-20-16/2 && this.playerVel.x>0)){
-						this.lastCollision = structuredClone(ui.frameCount);
-						this.playerVel.x *= -1*this.corPW;
-						this.playerCurVel.x = this.playerVel.x;
-						this.playerPos.x = clamp(this.playerPos.x, 20+16/2, window.width-20-16/2);
-						this.playerCurPos.x = clamp(this.playerPos.x, 20+16/2, window.width-20-16/2);
-						ui.se[3].play();
-					}
-					if((this.playerPos.y < 20+16/2 && this.playerVel.y<0) || (this.playerPos.y > window.height-20-16/2 && this.playerVel.y>0)){
-						this.lastCollision = structuredClone(ui.frameCount);
-						this.playerVel.y *= -1*this.corPW;
-						this.playerCurVel.y = this.playerVel.y;
-						this.playerPos.y = clamp(this.playerPos.y, 20+16/2, window.height-20-16/2);
-						this.playerCurPos.y = clamp(this.playerPos.y, 20+16/2, window.height-20-16/2);
-						ui.se[3].play();
-					}
-					
-					//lemon-wall
-					if((this.lemonPos.y < 20+48/2 && this.lemonVel.y<0) || (this.lemonPos.y > window.height-20-48/2 && this.lemonVel.y>0)){
-						this.lemonVel.y *= -1*this.corLW;
-						this.lemonVel.y += 0.1*(this.lemonVel.y ? this.lemonVel.y < 0 ? -1 : 1 : 0) //same as above, so the lemon never really stops
-						this.lemonPos.y = clamp(this.lemonPos.y, 20+48/2, window.height-20-48/2);
-						ui.se[4].play();
-					}
-					if((this.lemonPos.x < 20+48/2 && this.lemonVel.x<0) || (this.lemonPos.x > window.width-20-48/2 && this.lemonVel.x>0)){
-						this.lemonVel.x *= -1*this.corLW;
-						this.lemonPos.x = clamp(this.lemonPos.x, 20+48/2, window.width-20-48/2);
-						ui.se[4].play();
-					}
-					
-					//player-lemon
-					let dx = this.lemonPos.x-this.playerPos.x;
-					let dy = this.lemonPos.y-this.playerPos.y;
-					const r = dist2(dx, dy);
-					const dvx = this.playerVel.x-this.lemonVel.x;
-					const dvy = this.playerVel.y-this.lemonVel.y;
-					
-					if((r<(48/2 + 16/2)) && (dot(dx, dy, dvx, dvy)>0)){
-						this.lastCollision = structuredClone(ui.frameCount);
-						
-						dx /= r;
-						dy /= r; //now {dx, dy} = normalised displacement vector
-						const k1 = (this.playerMass - this.lemonMass)/(this.playerMass + this.lemonMass);
-						const k2 = 2*this.playerMass/(this.playerMass + this.lemonMass);
-						const k3 = 2*this.lemonMass/(this.playerMass + this.lemonMass);
-						const u1 = structuredClone(this.playerVel);
-						const u2 = structuredClone(this.lemonVel);
-						
-						const u1h_x = dot(u1.x, u1.y, dx, dy)*dx; //h for head-on
-						const u1h_y = dot(u1.x, u1.y, dx, dy)*dy;
-						const u2h_x = dot(u2.x, u2.y, dx, dy)*dx;
-						const u2h_y = dot(u2.x, u2.y, dx, dy)*dy;
-						
-						const v1h_x = this.corLP*(k1*u1h_x + k3*u2h_x);
-						const v1h_y = this.corLP*(k1*u1h_y + k3*u2h_y);
-						const v2h_x = this.corLP*(k2*u1h_x - k1*u2h_x);
-						const v2h_y = this.corLP*(k2*u1h_y - k1*u2h_y);
-						
-						const v1g_x = u1.x-u1h_x; //g for glancing
-						const v1g_y = u1.y-u1h_y;
-						const v2g_x = u2.x-u2h_x;
-						const v2g_y = u2.y-u2h_y;
-						
-						this.playerVel.x = (v1h_x + v1g_x);
-						this.playerVel.y = (v1h_y + v1g_y);
-						this.playerCurVel.x = (v1h_x + v1g_x);
-						this.playerCurVel.y = (v1h_y + v1g_y);
-						this.lemonVel.x = v2h_x + v2g_x;
-						this.lemonVel.y = v2h_y + v2g_y;
-						this.playerPos.x = this.lemonPos.x-(50/2+16/2)*dx;
-						this.playerPos.y = this.lemonPos.y-(50/2+16/2)*dy;
-						this.playerCurPos.x = this.lemonPos.x-(50/2+18/2)*dx;
-						this.playerCurPos.y = this.lemonPos.y-(50/2+18/2)*dy;
-						this.score += 1;
-						ui.se[0].play();
-					}
-					
-					
+										
 					break;
 				
 				case 'gameover':
@@ -340,6 +369,7 @@
 						ekeys[' ']=false;
 						this.gameState = 'playing'; //!! change back to startscreen or something later
 						this.gameSubState = 'ready';
+						this.previousGameState = 'playing';
 					}
 					break;
 				case 'startscreen':
@@ -353,12 +383,12 @@
 				
 				case 'playing':
 					if(ui.frameCount>this.respiteFrames*0.7){
-						if(ekeys['ArrowLeft']){
-							this.keyHasBeenPressed.horizontal = -1;
-						}
-						if(ekeys["ArrowRight"]){
-							this.keyHasBeenPressed.horizontal = 1;
-						}
+						// if(ekeys['ArrowLeft']){
+							// this.keyHasBeenPressed.horizontal = -1;
+						// }
+						// if(ekeys["ArrowRight"]){
+							// this.keyHasBeenPressed.horizontal = 1;
+						// }
 						if(ekeys["ArrowUp"]){
 							this.keyHasBeenPressed.vertical = -1;
 						}
@@ -372,12 +402,27 @@
 						this.gameState = 'gameover';
 						this.previousGameState = 'gameover';
 					}
-					if(this.gameSubState == 'win' || this.gameSubState == 'loss'){
+					
+					if(this.gameSubState == 'ready'){
+						if(ekeys['ArrowLeft']){
+							document.getElementById('fireRange').value -= (3-2*ekeys['Shift']); //holding shift for finer control
+						}
+						if(ekeys['ArrowRight']){
+							document.getElementById('fireRange').value -= -(3-2*ekeys['Shift']); //using += 1 instantly slides it all the way to max. why the heck?
+						}
+						if(ekeys[' ']){
+							this.fire();
+						}
+					}
+					
+					if(this.gameSubState == 'win' || this.gameSubState == 'loss' || this.gameSubState =='draw'){
 						if(ekeys[' ']){
 							this.resetStuff('gameover');
 							this.gameState = 'playing';
 							this.gameSubState = 'ready';
 							this.previousGameState = 'playing';
+							ekeys[' '] = false;
+							ui.frameCount = -this.fadeoutDuration*window.fps;
 						}
 					}
 					
@@ -398,8 +443,8 @@
 					}
 					if(ekeys['g']){
 						ui.frameCount = 0;
-						this.gameState = 'startscreen';
-						this.previousGameState = 'startscreen';
+						this.gameState = 'loading';
+						this.previousGameState = 'loading';
 					}
 					if(ekeys['h']){
 						this.help = !this.help;

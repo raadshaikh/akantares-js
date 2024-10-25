@@ -40,7 +40,7 @@
             }
             
 			this.bmps = {};
-			let bmp_names = `CATAPULT
+			const bmp_names = `CATAPULT
 COLOR1
 FADE_H
 FADE_V
@@ -74,9 +74,19 @@ WINMARK`.split('\n');
 			this.bgm2 = new Audio(this.bgm2_url);
 			this.bgm2.crossOrigin = "anonymous";
 			this.bgm2_playing = false;
-			this.se = [];
-			for(let i=0; i<=11; i++){
-				this.se[i] = new Audio(new URL('https://raadshaikh.github.io/jiljil-js/WAVE/SE'+String(i+1).padStart(2,'0')+'.wav'))
+			
+			const sfx_names = `CANCEL
+ERROR
+EXPLODE
+HIT
+MOVE
+OK
+READY
+SELECT
+THREE`.split('\n');
+			this.sfx = {};
+			for(const i in sfx_names){
+				this.sfxs[sfx_names[i]] = new Audio(new URL('https://raadshaikh.github.io/akantares-js/WAVE/PTN_'+sfx_names[i]+'.wav'));
 			}
 			
 			window.audioContext = new AudioContext();
@@ -215,7 +225,7 @@ WINMARK`.split('\n');
             this.requested = false;
 
             const { width, height } = this.canvas;
-			this.ctx.fillStyle = 'black';
+			this.ctx.fillStyle = '#0a1826';
 			this.ctx.fillRect(0, 0, width, height);
 			
 			//touchscreen ui
@@ -270,8 +280,7 @@ WINMARK`.split('\n');
 			
 			switch(this.game.gameState) {
 				case 'loading':
-					this.drawString(130,window.height/2-4,'...Loaded!\nPush Space');
-					// this.ctx.drawImage(this.bmps['WINMARK'], 0, 0, 16, 8, 160-16/2, 120-8/2, 16, 8); //star placeholder
+					this.drawString(130,window.height/2-4,'...Loaded!\n\nPush Space');
 					break;
 					
 				case 'startscreen':
@@ -296,6 +305,7 @@ WINMARK`.split('\n');
 					if(this.frameCount==172){this.se[11].play();}
 					this.frameCount += 1;
 					break;
+					
 				
 				case 'playing':	
 					// if(!this.bgm1_playing){
@@ -303,34 +313,92 @@ WINMARK`.split('\n');
 						// this.play_bgm(1);
 						// this.bgm1_playing = true;
 					// }
+					
 					for (let i=0; i<5; i++){
 						this.ctx.drawImage(this.bmps['WINMARK'], 8*(i<this.game.score[0]),0,8,8, 8,100+i*8,8,8);
 						this.ctx.drawImage(this.bmps['WINMARK'], 8*(i<this.game.score[1]),0,8,8, 304,100+i*8,8,8);
 					}
-					this.ctx.drawImage(this.bmps['PLANET'], 0,0,16,16, this.game.playerPos.x-16/2, this.game.playerPos.y-16/2, 16,16);
-					this.ctx.drawImage(this.bmps['PLANET'], 0,16,16,16, this.game.enemyPos.x-16/2, this.game.enemyPos.y-16/2, 16,16);
-					this.ctx.drawImage(this.bmps['CATAPULT'], 4*(this.frameCount%2 && this.game.gameSubState=='ready')+1, 1, 3, 3, this.game.playerPos.x+10*Math.cos(this.game.playerAngle*Math.PI/180)-3/2, this.game.playerPos.y+10*Math.sin(this.game.playerAngle*Math.PI/180)-3/2, 3, 3);
-					this.ctx.drawImage(this.bmps['CATAPULT'], 1, 1, 3, 3, this.game.enemyPos.x+10*Math.cos(this.game.enemyAngle*Math.PI/180)-3/2, this.game.enemyPos.y+10*Math.sin(this.game.enemyAngle*Math.PI/180)-3/2, 3, 3);
 					
+					if(!(this.game.gameSubState=='collided' && this.game.playerPos.h)){this.ctx.drawImage(this.bmps['PLANET'], 0+16*(this.frameCount%6==0 && this.game.playerPos.h),0+32*(this.frameCount%6==0 && this.game.playerPos.h),16,16, this.game.playerPos.x-16/2, this.game.playerPos.y-16/2, 16,16);} //player planet. alternate with white circle after getting hit but before conclusion of the overall shot. don't draw if it has been hit and exploding animation is ongoing.
+					if(!(this.game.gameSubState=='collided' && this.game.enemyPos.h)){this.ctx.drawImage(this.bmps['PLANET'], 0+16*(this.frameCount%6==0 && this.game.enemyPos.h),16+16*(this.frameCount%6==0 && this.game.enemyPos.h),16,16, this.game.enemyPos.x-16/2, this.game.enemyPos.y-16/2, 16,16);} //enemy planet
+					this.ctx.drawImage(this.bmps['CATAPULT'], 4*(this.frameCount%10<5 && this.game.gameSubState=='ready')+1, 1, 3, 3, this.game.playerPos.x+10*Math.cos(this.game.playerAngle*Math.PI/180)-3/2, this.game.playerPos.y+10*Math.sin(this.game.playerAngle*Math.PI/180)-3/2, 3, 3); //player catapult
+					this.ctx.drawImage(this.bmps['CATAPULT'], 1, 1, 3, 3, this.game.enemyPos.x+10*Math.cos(this.game.enemyAngle*Math.PI/180)-3/2, this.game.enemyPos.y+10*Math.sin(this.game.enemyAngle*Math.PI/180)-3/2, 3, 3); //enemy catapult
+					for(let i=0; i<this.game.playerTrail.length; i++){
+						this.ctx.drawImage(this.bmps['PLANET'], 43, 35, 1,1, this.game.playerTrail[i].x, this.game.playerTrail[i].y, 1,1); //playerMissile trail
+					}
+					for(let i=0; i<this.game.enemyTrail.length; i++){
+						this.ctx.drawImage(this.bmps['PLANET'], 59, 35, 1,1, this.game.enemyTrail[i].x, this.game.enemyTrail[i].y, 1,1); //enemyMissile trail
+					}
+					if(this.game.playerCollided){this.ctx.drawImage(this.bmps['MISSILE'], 32+16*(this.frameCount%2),0,16,16, this.game.playerMissilePos.x-16/2,this.game.playerMissilePos.y-16/2,16,16);} //playerMissile explosion
+					if(this.game.enemyCollided){this.ctx.drawImage(this.bmps['MISSILE'], 32+16*(this.frameCount%2),0,16,16, this.game.enemyMissilePos.x-16/2,this.game.enemyMissilePos.y-16/2,16,16);} //enemyMissile explosion
 					for(let i=0; i<this.game.planets.length; i++){
 						let m_i = this.game.planets[i].m;
-						this.ctx.drawImage(this.bmps['PLANET'], 0,32+16*m_i, 16+8*m_i,16+8*m_i, this.game.planets[i].x-8-4*m_i, this.game.planets[i].y-8-4*m_i, 16+8*m_i,16+8*m_i)
+						let h_i = this.game.planets[i].h;
+						if(!(this.game.gameSubState=='collided' && h_i-m_i>=2)){this.ctx.drawImage(this.bmps['PLANET'], 0+(16+8*m_i)*(this.frameCount%6==0 && h_i>0),32+16*m_i, 16+8*m_i,16+8*m_i, this.game.planets[i].x-8-4*m_i, this.game.planets[i].y-8-4*m_i, 16+8*m_i,16+8*m_i);} //grey planets
 					}
 					
-					for(let i=0; i<this.game.playerTrail.length; i++){
-						this.ctx.drawImage(this.bmps['PLANET'], 43, 35, 1,1, this.game.playerTrail[i].x, this.game.playerTrail[i].y, 1,1)
-					}
-					
-					if(this.game.gameSubState == 'flying') {
-						this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.playerCatapultPos.x-3/2, this.game.playerCatapultPos.y-3/2, 3, 3);
+					if(this.game.justStartedPlaying){
+						let t = this.frameCount/(1.5*window.fps); //cool nameplate sliding up animation
+						t = Math.min(0.5+8*t,1);
+						this.ctx.drawImage(this.bmps['NAMEPLATE'], 0,0,64,t*24, this.game.playerPos.x-64/2, this.game.playerPos.y-16/2-t*24, 64,t*24)
+						this.ctx.drawImage(this.bmps['NAMEPLATE'], 0,0,64,t*24, this.game.enemyPos.x-64/2, this.game.enemyPos.y-16/2-t*24, 64,t*24);
+						this.ctx.font = '9px courier new';
+						this.ctx.textAlign = 'center';
+						this.ctx.fillText(this.game.playerName, this.game.playerPos.x, this.game.playerPos.y-16/2-24/2); //12 letters fit in the nameplate at 9px courier new
+						this.ctx.fillText('enemy', this.game.enemyPos.x, this.game.enemyPos.y-16/2-24/2);
 					}
 					
 					if(this.game.gameSubState == 'ready'){
-						this.drawString(14, 218, 'Please Take your shot'+'.'.repeat(this.frameCount/30%4));
+						this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Please Take your shot'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					}
+					
+					if(this.game.gameSubState == 'countdown'){
+						this.ctx.drawImage(this.bmps['THREE'], 16*(~~(this.frameCount/(0.5*window.fps))-1), 0, 16, 16, window.width/2-16/2, window.height/2-16/2, 16, 16);
+					}
+					
+					if(this.game.gameSubState == 'flying') {
+						if(!this.game.playerCollided){this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.playerMissilePos.x-3/2, this.game.playerMissilePos.y-3/2, 3, 3);}
+						if(!this.game.enemyCollided){this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.enemyMissilePos.x-3/2, this.game.enemyMissilePos.y-3/2, 3, 3);}
+					}
+					
+					if(this.game.gameSubState == 'collided') {
+						for(let i=0; i<this.game.planets.length; i++){
+							let m_i = this.game.planets[i].m;
+							let h_i = this.game.planets[i].h;
+							//exploding planet animation. i'm a little bummed at how there's no nice way to let this animation play and extend this into the next shot a little bit, like it does in the game. oh well.
+							if(h_i-m_i>=2){
+								for(let j=0; j<5; j++){ //5 exploding bits
+									this.ctx.drawImage(this.bmps['PLANET'], 64,32+8*(this.frameCount%10<5), 8,8, this.game.planets[i].x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2), this.game.planets[i].y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2), 8,8);
+								}
+							}
+						}
+						if(this.game.playerPos.h){
+							for(let j=0; j<5; j++){
+								this.ctx.drawImage(this.bmps['PLANET'], 32,32+8*(this.frameCount%10<5), 8,8, this.game.playerPos.x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2)-8/2, this.game.playerPos.y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2)-8/2, 8,8);
+							}
+						}
+						if(this.game.enemyPos.h){
+							for(let j=0; j<5; j++){
+								this.ctx.drawImage(this.bmps['PLANET'], 48,32+8*(this.frameCount%10<5), 8,8, this.game.enemyPos.x-0.4*this.frameCount*Math.cos(j*2*Math.PI/5+Math.PI/2)-8/2, this.game.enemyPos.y-0.4*this.frameCount*Math.sin(j*2*Math.PI/5+Math.PI/2)-8/2, 8,8);
+							}
+						}
+						if(this.game.resultString=='1hit'){this.ctx.drawImage(this.bmps['RESULT'], 0,4,40,16, window.width/2-40/2,window.height/2-16/2,40,16);}
+						if(this.game.resultString=='miss'){this.ctx.drawImage(this.bmps['RESULT'], 0,28,68,16, window.width/2-68/2,window.height/2-16/2,68,16);}
+						if(this.game.resultString=='2hit'){this.ctx.drawImage(this.bmps['RESULT'], 0,52,68,16, window.width/2-68/2,window.height/2-16/2,68,16);}
+						
 					}
 					
 					if(['win', 'lose', 'draw'].includes(this.game.gameSubState)){
 						this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);
+						this.drawString(126, window.height-20, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					}
+					
+					if(this.frameCount<0){ //fade-in animation after a scoring shot
+						let t = 1-Math.abs(this.frameCount/(this.game.fadeoutDuration*window.fps)); //0 to 1, parameterising the fade completion
+						this.ctx.beginPath();
+						this.ctx.lineWidth = (1-t)*window.height;
+						this.ctx.rect(0,0,window.width,window.height);
+						this.ctx.stroke();
 					}
 					
 					this.frameCount += 1;
@@ -371,38 +439,6 @@ WINMARK`.split('\n');
 				default:
 					break;
 			}
-			
-			if(false){
-				for(let i=1; i<=14; i++){
-					this.ctx.drawImage(this.bmp_jiljil, 64, 64, 20, 20, i*20, 0, 20, 20); //ceiling
-					this.ctx.drawImage(this.bmp_jiljil, 64, 64, 20, 20, i*20, 240-20, 20, 20); //floor
-				}
-				this.ctx.drawImage(this.bmp_jiljil, 0, 48, 64, 64, this.game.lemonPos.x-64/2, this.game.lemonPos.y-64/2, 64, 64); //lemon
-				for(let i=6; i>=0; i--){ //worm segments
-						this.ctx.drawImage(this.bmp_jiljil, 16*(i+1), 0, 16, 16, this.game.playerSegPos[i].x-16/2, this.game.playerSegPos[i].y-16/2, 16, 16);
-				}
-				this.ctx.drawImage(this.bmp_jiljil, 64*(this.game.gameState=='gameover'), 16*(this.game.gameState=='gameover'), 16, 16, this.game.playerPos.x-16/2, this.game.playerPos.y-16/2, 16, 16); //worm head (crying or not depending on gameover)
-				this.ctx.drawImage(this.bmp_jiljil, 0, 16, 32, 32, this.game.paw0Pos.x-32/2, this.game.paw0Pos.y-32/2, 32, 32); //pawprints
-				this.ctx.drawImage(this.bmp_jiljil, 32, 16, 32, 32, this.game.paw1Pos.x-32/2, this.game.paw1Pos.y-32/2, 32, 32); //pawprints
-				if(this.game.gameState=='playing'){//sparkle
-					this.ctx.drawImage(this.bmp_jiljil, 64+16*(this.game.sparkleFrame), 48, 16, 16, this.game.sparklePos.x-16/2, this.game.sparklePos.y-16/2, 16, 16);
-				}
-				this.ctx.drawImage(this.bmp_jiljil, 63, 94, 24, 8, 20, 211, 24, 8); //'teema:'
-				this.ctx.drawImage(this.bmp_jiljil, 64, 84, 64, 8, 48, 211, 64, 8); //'shippo ga abunai'
-				this.ctx.drawImage(this.bmp_jiljil, 80, 16, 48, 8, 140, 223, 48, 8); //'esc->exit'
-				this.ctx.drawImage(this.bmp_jiljil, 80, 120, 48, 8, 225, 211, 48, 8); //'score'
-				this.ctx.drawImage(this.bmp_jiljil, 80, 120, 48, 8, 225, 20, 48, 8); //'score'
-				this.ctx.drawImage(this.bmp_jiljil, 80, 112, 18, 8, 207, 21, 18, 8); //'hi'
-				this.drawNumber(275, 203, this.game.score, 3); //score
-				this.drawNumber(275, 20, this.game.highscore, 3); //high score
-				
-				//touchscreen ui
-				if ('ontouchstart' in window) {
-					var doNothing = 0;
-				}
-				
-			}
-			if(this.game.gameState == 'gameover'){this.ctx.drawImage(this.bmp_jiljil, 64, 36, 64, 12, 48, 48, 64, 12);}
         }
     }
 

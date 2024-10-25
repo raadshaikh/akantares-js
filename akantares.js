@@ -162,6 +162,7 @@
 						// ui.se[6].play();
 						// this.justStartedPlaying = false;
 					// }
+					if(document.getElementById('fireDiv').style.visibility=='hidden'){document.getElementById('fireDiv').style.visibility='visible';}
 					if(ui.frameCount>1.5*window.fps){
 						this.justStartedPlaying = false;
 					}
@@ -309,13 +310,13 @@
 								this.playerCollided = false;
 								this.enemyCollided = false;
 								
-								if(this.score[0] == 5 && this.score[1] == 5){
+								if(this.score[0] >= 5 && this.score[1] >= 5){
 									this.gameSubState = 'draw';
 								}
-								else if(this.score[0] == 5){
+								else if(this.score[0] >= 5){
 									this.gameSubState = 'win';
 								}
-								else if(this.score[1] == 5){
+								else if(this.score[1] >= 5){
 									this.gameSubState = 'lose';
 								}
 								else{

@@ -69,9 +69,8 @@ WINMARK`.split('\n');
 			this.bgm_names = `STARTSCREEN
 READY
 FLYING
-WIN
-LOSE
-GAMEOVER`.split('\n');
+GAMEOVER
+XXXX`.split('\n');
 			this.bgms = {};
 			this.bgmURLs = {};
 			this.bgms_playing = {};
@@ -352,6 +351,11 @@ THREE`.split('\n');
 					}
 					
 					if(this.game.gameSubState == 'countdown'){
+						if(!this.bgms_playing['XXXX']){
+							this.stop_bgm();
+							this.play_bgm('XXXX');
+							this.bgms_playing['XXXX'] = true;
+						}
 						if(this.frameCount%(0.5*window.fps)==0 && this.frameCount!=0){
 							this.sfxs['THREE'].play();
 						}

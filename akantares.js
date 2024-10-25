@@ -446,6 +446,8 @@
 					}
 					if(ekeys['g']){
 						ui.frameCount = 0;
+						ui.stop_bgm();
+						window.audioContext.resume();
 						this.gameState = 'loading';
 						this.previousGameState = 'loading';
 					}

@@ -58,7 +58,6 @@ STARTSCREEN
 THREE
 TITLE
 WINMARK`.split('\n');
-			
 			for (const i in bmp_names){
 				this.bmps[bmp_names[i]] = new Image();
 				this.bmps[bmp_names[i]].src = "BITMAP/BMP_"+bmp_names[i]+".png";
@@ -67,7 +66,7 @@ WINMARK`.split('\n');
 			
 			this.frameCount = 0;
 			
-			const bgm_names = `STARTSCREEN
+			this.bgm_names = `STARTSCREEN
 READY
 FLYING
 WIN
@@ -75,11 +74,12 @@ LOSE
 GAMEOVER`.split('\n');
 			this.bgms = {};
 			this.bgmURLs = {};
-			for(const i in bgm_names){
-				this.bgmURLS[bgm_names[i]] = new URL('https://raadshaikh.github.io/akantares-js/WAVE/BGM_'+bgm_names[i]+'.wav');
-				this.bgms[bgm_names[i]] = new Audio(this.bgmURLs[bgm_names[i]]);
-				this.bgms[bgm_names[i]].crossOrigin = 'anonymous';
-				this.bgms[bgm_names[i]].playing = false;
+			this.bgms_playing = {};
+			for(const i in this.bgm_names){
+				this.bgmURLs[this.bgm_names[i]] = new URL('https://raadshaikh.github.io/akantares-js/WAVE/BGM_'+this.bgm_names[i]+'.wav');
+				this.bgms[this.bgm_names[i]] = new Audio(this.bgmURLs[this.bgm_names[i]]);
+				this.bgms[this.bgm_names[i]].crossOrigin = 'anonymous';
+				this.bgms[this.bgm_names[i]].playing = false;
 			}
 			
 			const sfx_names = `CANCEL
@@ -121,7 +121,7 @@ THREE`.split('\n');
 		}
 		async stop_bgm(){
 			if(this.source){
-				// for(let bgmName in bgm_names){this.bgms[bgmName]_playing = false;} //???
+				for(let i in this.bgm_names){this.bgms_playing[this.bgm_names[i]] = false;}
 				this.source.stop();
 				}
 		}
@@ -291,10 +291,13 @@ THREE`.split('\n');
 					break;
 					
 				case 'startscreen':
-					this.stop_bgm();
-					this.play_bgm('STARTSCREEN');
+					if(!this.bgms_playing['STARTSCREEN']){
+						this.stop_bgm();
+						this.play_bgm('STARTSCREEN');
+						this.bgms_playing['STARTSCREEN'] = true;
+					}
 					this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240);
-					this.drawString(126, window.height-20, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					this.drawString(126, window.height-28, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					break;
 					
 				
@@ -340,6 +343,11 @@ THREE`.split('\n');
 					}
 					
 					if(this.game.gameSubState == 'ready'){
+						if(!this.bgms_playing['READY']){
+							this.stop_bgm();
+							this.play_bgm('READY');
+							this.bgms_playing['READY'] = true;
+						}
 						this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Please Take your shot'+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					}
 					
@@ -351,6 +359,11 @@ THREE`.split('\n');
 					}
 					
 					if(this.game.gameSubState == 'flying') {
+						if(!this.bgms_playing['FLYING']){
+							this.stop_bgm();
+							this.play_bgm('FLYING');
+							this.bgms_playing['FLYING'] = true;
+						}
 						if(!this.game.playerCollided){this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.playerMissilePos.x-3/2, this.game.playerMissilePos.y-3/2, 3, 3);}
 						if(!this.game.enemyCollided){this.ctx.drawImage(this.bmps['MISSILE'], 3+8*(this.frameCount>5*window.fps)+8*(this.frameCount>10*window.fps), 3, 3, 3, this.game.enemyMissilePos.x-3/2, this.game.enemyMissilePos.y-3/2, 3, 3);}
 					}
@@ -389,6 +402,11 @@ THREE`.split('\n');
 					}
 					
 					if(['win', 'lose', 'draw'].includes(this.game.gameSubState)){
+						if(!this.bgms_playing['GAMEOVER']){
+							this.stop_bgm();
+							this.play_bgm('GAMEOVER');
+							this.bgms_playing['GAMEOVER'] = true;
+						}
 						this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);
 						this.drawString(126, window.height-20, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					}
@@ -413,7 +431,7 @@ THREE`.split('\n');
 					break;
 					
 				case 'escmenu':
-					for(let bgmName in bgm_names){this.bgms[bgmName].pause();}
+					for(let i in this.bgm_names){this.bgms[this.bgm_names[i]].pause();}
 					this.drawString(0,0,'CONTINUE:F');
 					this.drawString(0,8,'RESET   :G');
 					this.drawString(0,16,'HELP    :H');

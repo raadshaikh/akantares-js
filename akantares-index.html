@@ -44,6 +44,8 @@
 		</div>
 		<br>
         <canvas id="game-canvas" style='image-rendering: pixelated'></canvas>
+		<br><br>
+		<button id='zoomButton' onclick="window.keysBeingPressed['z']=true;" style='visibility:hidden'>Zoom</button>
     </div>
 
 	<script src="akantares.js"></script>
@@ -61,17 +63,9 @@
             gameCanvas.width = scale*width;
             gameCanvas.height = scale*height;
 			if('ontouchstart' in window){
-				const touchCanvas = document.createElement('canvas');
-				touchCanvas.id = 'touch-canvas';
-				touchCanvas.width = scale*width;
-				touchCanvas.height = scale*height;
-				touchCanvas.style.imageRendering = 'pixelated';
-				<!-- touchCanvas.style.borderStyle = 'solid'; -->
-				<!-- touchCanvas.style.borderWidth = '1px'; -->
-				canvasContainer.appendChild(touchCanvas);
+				document.getElementById('zoomButton').style.visibility = 'visible';
 			}
-			const touchCanvas = document.getElementById('touch-canvas');
-            const ui = new GameUI(gameCanvas, touchCanvas);
+            const ui = new GameUI(gameCanvas);
 			const game = new Game();
 			ui.setGame(game);
 			setInterval(game.update.bind(game), 1000/fps);

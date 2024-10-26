@@ -350,12 +350,6 @@
 				gameCanvas.height = window.scale*window.height;
 				ui.ctx.imageSmoothingEnabled = false;
 				ui.ctx.scale(window.scale, window.scale);
-				if('ontouchstart' in window){
-					touchCanvas.width = window.scale*window.width;
-					touchCanvas.height = window.scale*window.height;
-					ui.ctx2.imageSmoothingEnabled = false;
-					ui.ctx2.scale(window.scale, window.scale);
-				}
 				ekeys['z'] = false;
 			}
 			if(ekeys['Escape']){

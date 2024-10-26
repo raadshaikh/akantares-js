@@ -13,7 +13,7 @@
         /**
          * @param {HTMLCanvasElement} canvas 
          */
-        constructor(canvas, canvas2) {
+        constructor(canvas) {
             this.canvas = canvas;
             this.ctx = canvas.getContext("2d");
 			this.ctx.scale(window.scale, window.scale); //zoom
@@ -21,24 +21,20 @@
             this.game = null;
             this.requested = false;
 			
+			this.pushSpace = 'Push Space';
+			
 			if ("ontouchstart" in window) {
-                this.canvas2 = canvas2;
-				this.ctx2 = canvas2.getContext('2d');
 				this.ctx.scale(window.scale, window.scale);
 				this.ctx.imageSmoothingEnabled = false;
 				
-				this.bmp_touchUI = new Image();
-				this.bmp_touchUI.src = "BITMAP/BMP_TOUCH.png";
-				this.bmp_touchUI.addEventListener("load", this.onImageLoad.bind(this));
-				
-				this.canvas2.addEventListener('touchstart', this.onTouchStart.bind(this));
-                this.canvas2.addEventListener('touchmove', this.onTouchMove.bind(this));
-                this.canvas2.addEventListener('touchend', this.onTouchEnd.bind(this));
 				this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
                 this.canvas.addEventListener('touchmove', this.onTouchMove.bind(this));
                 this.canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
+				
+				this.pushSpace = 'Press Anywhere';
             }
-            
+			
+			
 			this.bmps = {};
 			const bmp_names = `CATAPULT
 COLOR1
@@ -127,27 +123,26 @@ THREE`.split('\n');
 		
         onTouchStart(e) {
             this.touching = true;
-            this.touchX = e.touches[0].clientX - this.canvas2.getBoundingClientRect().x;
-            this.touchY = e.touches[0].clientY - this.canvas2.getBoundingClientRect().y;
+            this.touchX = e.touches[0].clientX - this.canvas.getBoundingClientRect().x;
+            this.touchY = e.touches[0].clientY - this.canvas.getBoundingClientRect().y;
 			this.touchX /= window.scale;
 			this.touchY /= window.scale;
 			var x = this.touchX - window.width/2;
 			var y = -this.touchY + window.height/2;
 			var r = dist2(x,y);
-			window.keysBeingPressed[' '] = (r<52);
-			window.keysBeingPressed['Escape'] = (this.touchX>32-10 && this.touchX<32+32+10 && this.touchY>8-10 && this.touchY<8+32+10); //\pm 10 grace pixels for fat fingering
-			window.keysBeingPressed['z'] = (this.touchX>32-10 && this.touchX<32+32+10 && this.touchY>200-10 && this.touchY<200+32+10);
-			window.keysBeingPressed['f'] = (e.touches[0].pageX/window.scale>80 && e.touches[0].pageX/window.scale<160 && e.touches[0].pageY/window.scale<100);
-			window.keysBeingPressed['g'] = (e.touches[0].pageX/window.scale>160 && e.touches[0].pageX/window.scale<240 && e.touches[0].pageY/window.scale<100);
-			window.keysBeingPressed['h'] = (e.touches[0].pageX/window.scale>240 && e.touches[0].pageY/window.scale<100);
+			window.keysBeingPressed[' '] = !(this.game.gameState=='escmenu') && !(this.touchX<32 && this.touchY<32);
+			window.keysBeingPressed['Escape'] = (this.touchX<32 && this.touchY<32);
+			window.keysBeingPressed['f'] = (this.touchX>60 && this.touchX<160 && this.touchY<100);
+			window.keysBeingPressed['g'] = (this.touchX>160 && this.touchX<240 && this.touchY<100);
+			window.keysBeingPressed['h'] = (this.touchX>240 && this.touchY<100);
         }
 
         onTouchMove(e) {
             if (this.touching) {
                 e.preventDefault();
 				window.keysBeingPressed[' '] = false;
-                this.touchX = e.touches[0].clientX - this.canvas2.getBoundingClientRect().x;
-                this.touchY = e.touches[0].clientY - this.canvas2.getBoundingClientRect().y;
+                this.touchX = e.touches[0].clientX - this.canvas.getBoundingClientRect().x;
+                this.touchY = e.touches[0].clientY - this.canvas.getBoundingClientRect().y;
 				this.touchX /= window.scale;
 				this.touchY /= window.scale;
 				var x = this.touchX - window.width/2;
@@ -195,28 +190,28 @@ THREE`.split('\n');
             this.game.onUpdate = this.draw.bind(this);
         }
 
-        // drawNumber(x, y, number, zeroPad = 0, rtl=false) {
-            // let str = number.toString();
-            // while (str.length < zeroPad) {
-                // str = "0" + str;
-            // }
-			// if (rtl==false) {
-				// for (let i = 0; i < str.length; i++) {
-					// this.ctx.drawImage(this.bmp_jiljil, (str.charCodeAt(i) - 0x30) * 8, 112, 8, 16, x + 8*i, y, 8, 16);
-				// }
-			// }
-			// else if(rtl==true) //right-to-left, for right-aligned numbers
-				// for (let i = str.length-1; i >= 0; i--) {
-					// this.ctx.drawImage(this.bmp_jiljil, (str.charCodeAt(i) - 0x30) * 8, 112, 8, 16, x - 8*(str.length-i), y, 8, 16);
-				// }
-        // }
+        drawNumber(x, y, number, zeroPad = 0, rtl=false) { //uses the pixel aquarium font found in bmp_keycode. there are two other sets of number glyphs in bmp_font_1, i have not bothered implementing those.
+            let str = number.toString();
+            while (str.length < zeroPad) {
+                str = "0" + str;
+            }
+			if (rtl==false) {
+				for (let i = 0; i < str.length; i++) {
+					this.ctx.drawImage(this.bmps['KEYCODE'], (str.charCodeAt(i) - 0x30) * 8, 24, 8, 8, x-1 + 7*i, y, 8, 8);
+				}
+			}
+			else if(rtl==true) //right-to-left, for right-aligned numbers
+				for (let i = str.length-1; i >= 0; i--) {
+					this.ctx.drawImage(this.bmps['KEYCODE'], (str.charCodeAt(i) - 0x30) * 8, 24, 8, 8, x-1 - 7*(str.length-i), y, 8, 8);
+				}
+        }
 		
 		drawString(x, y, str, zoom=1){
 			let newlines = [0];
 			for(let i=0; i<str.length; i++){
 				if(str[i]=='\n'){newlines.push(i);}
 				if(str.charCodeAt(i)>=0x20){
-					this.ctx.drawImage(this.bmps['FONT_1'], 8*((str.charCodeAt(i)-0x20)%32), 12*~~((str.charCodeAt(i)-0x20)/32), 8, 12, x+6*(i-newlines[newlines.length-1]-(newlines.length>1))*zoom, y+12*(newlines.length-1)*zoom, 8*zoom, 12*zoom); //~~ is shortcut for floor function somehow
+					this.ctx.drawImage(this.bmps['FONT_1'], 8*((str.charCodeAt(i)-0x20)%32), 12*~~((str.charCodeAt(i)-0x20)/32), 8, 12, x+6*(i-newlines[newlines.length-1]-(newlines.length>1))*zoom, y+12*(newlines.length-1)*zoom -2, 8*zoom, 12*zoom); //~~ is shortcut for floor function somehow
 				}
 			}
 		}
@@ -234,59 +229,9 @@ THREE`.split('\n');
 			this.ctx.fillStyle = '#0a1826';
 			this.ctx.fillRect(0, 0, width, height);
 			
-			//touchscreen ui
-			/*
-			if ('ontouchstart' in window) {
-				this.ctx2.fillstyle = 'black';
-				this.ctx2.fillRect(0, 0, width, height);
-				for(let i=0; i<=15; i++){
-					// this.ctx2.drawImage(this.bmp_jiljil, 64, 64, 20, 20, i*20, 0, 20, 20); //ceiling
-					// this.ctx2.drawImage(this.bmp_jiljil, 64, 64, 20, 20, i*20, 240-20, 20, 20); //floor
-					this.ctx2.drawImage(this.bmp_jiljil, 64, 64, 20, 20, 0, i*20, 20, 20); //left wall
-					this.ctx2.drawImage(this.bmp_jiljil, 64, 64, 20, 20, 320-20, i*20, 20, 20); //left wall
-				}
-				// this.ctx2.drawImage(this.bmp_touchUI, 0, 0, 320, 240, 0, 0, 320, 240);
-				this.ctx2.drawImage(this.bmp_touchUI, 0, 0, 32, 32, 32, 8, 32, 32); //esc button
-				this.ctx2.drawImage(this.bmp_touchUI, 0, 72, 32, 32, 32, 200, 32, 32); //z button
-				this.ctx2.drawImage(this.bmp_touchUI, 88, 0, 196, 196, 61, 21, 196, 196); //tan circle
-				for(let i=0; i<8; i++){ //compass rose
-					var x=160+88*Math.cos(i*2*Math.PI/8); //radius is nominally 90 but it was looking a little wonky so slight adjustments here
-					var y=120-89*Math.sin(i*2*Math.PI/8);
-					var size=i%2?6:9;
-					this.ctx2.drawImage(this.bmp_touchUI, 0, i%2?65:56, size, size, ~~(x-size/2), ~~(y-size/2), size, size);
-				}
-				if(this.game.gameState!='playing'){
-					this.ctx2.drawImage(this.bmp_touchUI, 32, 0, 56, 56, 132, 92, 56, 56); //space button
-				}
-				if(this.game.gameState=='playing'){
-					this.ctx2.drawImage(this.bmp_touchUI, 9, 56, 5, 5, 158, 117, 5, 5); //compass centre dot
-					this.UIhead_x = 1*window.keysBeingPressed['ArrowRight'] + -1*window.keysBeingPressed['ArrowLeft'];
-					this.UIhead_y = 1*window.keysBeingPressed['ArrowUp'] + -1*window.keysBeingPressed['ArrowDown'];
-					this.UIhead_x *= 89/(this.UIhead_x&&this.UIhead_y?2**0.5:1);
-					this.UIhead_y *= 89/(this.UIhead_x&&this.UIhead_y?2**0.5:1);
-					this.UIhead_x = 160+this.UIhead_x-16/2;
-					this.UIhead_y = 120-this.UIhead_y-16/2;
-					// if(window.keysBeingPressed['ArrowRight']||window.keysBeingPressed['ArrowUp']||window.keysBeingPressed['ArrowLeft']||window.keysBeingPressed['ArrowDown']){
-						this.ctx2.drawImage(this.bmp_jiljil, 0, 0, 16, 16, ~~this.UIhead_x, ~~this.UIhead_y, 16, 16);
-					// }
-				}
-				if(this.game.gameState=='gameover'){
-					// if(!(window.keysBeingPressed['ArrowRight']||window.keysBeingPressed['ArrowUp']||window.keysBeingPressed['ArrowLeft']||window.keysBeingPressed['ArrowDown'])){
-						// this.UIhead_x = 160-16/2;
-						// this.UIhead_y = 120-16/2;
-					// }
-					if(this.UIhead_x==160-16/2 && this.UIhead_y==120-16/2){
-						this.UIhead_y -= 16;
-					}
-					this.ctx2.drawImage(this.bmp_jiljil, 64, 16, 16, 16, ~~this.UIhead_x, ~~this.UIhead_y, 16, 16);
-				}
-					
-			}
-			*/
-			
 			switch(this.game.gameState) {
 				case 'loading':
-					this.drawString(130,window.height/2-4,'...Loaded!\n\nPush Space');
+					this.drawString(130-6*(this.pushSpace.length-10)/2,window.height/2-4,'...Loaded!\n\n'+this.pushSpace);
 					break;
 					
 				case 'startscreen':
@@ -296,16 +241,11 @@ THREE`.split('\n');
 						this.bgms_playing['STARTSCREEN'] = true;
 					}
 					this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240);
-					this.drawString(126, window.height-28, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-28, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					break;
 					
 				
-				case 'playing':	
-					// if(!this.bgm1_playing){
-						// this.stop_bgm();
-						// this.play_bgm(1);
-						// this.bgm1_playing = true;
-					// }
+				case 'playing':
 					
 					for (let i=0; i<5; i++){
 						this.ctx.drawImage(this.bmps['WINMARK'], 8*(i<this.game.score[0]),0,8,8, 8,100+i*8,8,8);
@@ -412,7 +352,7 @@ THREE`.split('\n');
 							this.bgms_playing['GAMEOVER'] = true;
 						}
 						this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);
-						this.drawString(126, window.height-20, 'Push Space'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+						this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-20, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					}
 					
 					if(this.frameCount<0){ //fade-in animation after a scoring shot
@@ -426,12 +366,7 @@ THREE`.split('\n');
 					break;
 				
 				case 'gameover':
-					// if(!this.bgm2_playing){
-						// this.stop_bgm();
-						// this.play_bgm(2);
-						// this.bgm2_playing = true;
-					// }
-					
+					//this has been subsumed into substates of 'playing'
 					break;
 					
 				case 'escmenu':
@@ -440,10 +375,9 @@ THREE`.split('\n');
 					this.drawString(0,8,'RESET   :G');
 					this.drawString(0,16,'HELP    :H');
 					if ('ontouchstart' in window) {
-						this.ctx.drawImage(this.bmp_touchUI, 0, 104, 68, 68, 90, 14, 68, 68); //bubbles around F, G, H
-						this.ctx.drawImage(this.bmp_touchUI, 0, 104, 68, 68, 90+80*1+2, 14, 68, 68);
-						this.ctx.drawImage(this.bmp_touchUI, 0, 104, 68, 68, 90+80*2+1, 14, 68, 68);
 						this.ctx.filter = 'brightness(50%)';
+						for(let i=0;i<3;i++){this.ctx.drawImage(this.bmps['PLANET'],0,48,24,24,80+i*82,26,68,68);} //bubbles around FGH
+						this.ctx.filter = 'brightness('+(65+20*Math.floor((this.frameCount+Math.floor(60*Math.random()))%100==0)).toString()+'%)'; //randomish blinking effect on FGH
 						this.drawString(104,28,'F', 5);
 						this.drawString(104+80*1,28,'G', 5);
 						this.drawString(104+80*2,28,'H', 5);
@@ -456,6 +390,13 @@ THREE`.split('\n');
 					
 				default:
 					break;
+			}
+			
+			if(('ontouchstart' in window) && this.game.gameState!='escmenu'){
+				this.ctx.globalAlpha = 0.1;
+				// this.ctx.drawImage(this.bmps['PLANET'],0,32,16,16,0,0,32,32);
+				this.drawString(8,10,'Esc');
+				this.ctx.globalAlpha = 1;
 			}
 			
 			this.frameCount += 1;

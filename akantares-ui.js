@@ -21,6 +21,7 @@
             this.game = null;
             this.requested = false;
 			
+			this.startscreenAnim = Math.floor(2*Math.random()); //randomly choosing one of two title screen animation styles
 			this.pushSpace = 'Push Space';
 			
 			if ("ontouchstart" in window) {
@@ -240,13 +241,29 @@ THREE`.split('\n');
 						this.play_bgm('STARTSCREEN');
 						this.bgms_playing['STARTSCREEN'] = true;
 					}
+					if(this.frameCount<0){ //fade-in animation
+						let t = 1-Math.abs(this.frameCount/(this.game.fadeinDuration*window.fps)); //0 to 1, parameterising the fade completion
+						this.ctx.beginPath();
+						this.ctx.lineWidth = (1-t)*window.height;
+						this.ctx.rect(0,0,window.width,window.height);
+						this.ctx.stroke();
+					}
 					// this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240); //old boring title screen graphic
 					this.drawString(52,92,'AKANTARES',4);
 					this.ctx.drawImage(this.bmps['TITLE'], 8, 32, 112, 8, 100, 140, 112, 8);
 					//UBER COOL-LOOKING ANIMATION THINGY!!!
-					for(let i=0; i<10; i++){
-						this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)), 1,1);
-						this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)+Math.PI), 1,1);
+					if(this.startscreenAnim == 0){
+						for(let i=0; i<10; i++){
+							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)+Math.PI), 1,1);
+						}
+					}
+					//alternate animation
+					else{
+						for(let i=0; i<16; i++){
+							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), 1,1);
+						}
 					}
 					this.ctx.drawImage(this.bmps['PLANET'],0,0,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount)-16/2, 16,16);
 					this.ctx.drawImage(this.bmps['PLANET'],0,16,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount+Math.PI)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount+Math.PI)-16/2, 16,16);
@@ -365,7 +382,7 @@ THREE`.split('\n');
 					}
 					
 					if(this.frameCount<0){ //fade-in animation after a scoring shot
-						let t = 1-Math.abs(this.frameCount/(this.game.fadeoutDuration*window.fps)); //0 to 1, parameterising the fade completion
+						let t = 1-Math.abs(this.frameCount/(this.game.fadeinDuration*window.fps)); //0 to 1, parameterising the fade completion
 						this.ctx.beginPath();
 						this.ctx.lineWidth = (1-t)*window.height;
 						this.ctx.rect(0,0,window.width,window.height);

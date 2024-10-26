@@ -46,7 +46,7 @@
 			this.G = 3000; //universal gravitational constant
 			this.initCatapultSpeed = 14;
 			this.respiteFrames = 30; //# of frames at beginning when player gravity is disabled
-			this.fadeoutDuration = 0.2;
+			this.fadeinDuration = 0.2;
 			
 			this.playerName = 'debugName';
 			// this.playerName = window.prompt('Name: ');
@@ -323,7 +323,7 @@
 									this.resetStuff('shot');
 									this.gameSubState = 'ready';
 									ui.frameCount = 0;
-									if(this.resultString=='1hit' || this.resultString=='2hit'){ui.frameCount = -this.fadeoutDuration*window.fps;} //for the fade-in animation. to let the ui script know, i'm encoding this info in the fact that the frame counter is negative.
+									if(this.resultString=='1hit' || this.resultString=='2hit'){ui.frameCount = -this.fadeinDuration*window.fps;} //for the fade-in animation. to let the ui script know, i'm encoding this info in the fact that the frame counter is negative.
 								}
 							}
 			
@@ -367,6 +367,8 @@
 						this.gameState = 'startscreen';
 						this.gameSubState = 'null';
 						this.previousGameState = 'startscreen';
+						ui.startscreenAnim = Math.floor(2*Math.random());
+						ui.frameCount = -this.fadeinDuration*window.fps;
 					}
 					break;
 				case 'startscreen':
@@ -403,7 +405,7 @@
 							this.gameSubState = 'ready';
 							this.previousGameState = 'playing';
 							ekeys[' '] = false;
-							ui.frameCount = -this.fadeoutDuration*window.fps;
+							ui.frameCount = -this.fadeinDuration*window.fps;
 						}
 					}
 					

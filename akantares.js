@@ -350,6 +350,7 @@
 				gameCanvas.height = window.scale*window.height;
 				ui.ctx.imageSmoothingEnabled = false;
 				ui.ctx.scale(window.scale, window.scale);
+				resizeSlider();
 				ekeys['z'] = false;
 			}
 			if(ekeys['Escape']){
@@ -380,33 +381,15 @@
 					break;
 				
 				case 'playing':
-					// if(ui.frameCount>this.respiteFrames*0.7){
-						// if(ekeys['ArrowLeft']){
-							// this.keyHasBeenPressed.horizontal = -1;
-						// }
-						// if(ekeys["ArrowRight"]){
-							// this.keyHasBeenPressed.horizontal = 1;
-						// }
-						// if(ekeys["ArrowUp"]){
-							// this.keyHasBeenPressed.vertical = -1;
-						// }
-						// if(ekeys["ArrowDown"]){
-							// this.keyHasBeenPressed.vertical = 1;
-						// }
-					// }
-					if(ekeys['k']){
-						ui.se[5].play();
-						if(this.score > this.highscore){this.highscore = this.score;}
-						this.gameState = 'gameover';
-						this.previousGameState = 'gameover';
-					}
 					
 					if(this.gameSubState == 'ready'){
 						if(ekeys['ArrowLeft']){
-							document.getElementById('fireRange').value -= (3-2*ekeys['Shift']); //holding shift for finer control
+							this.playerAngle -= (3-2*ekeys['Shift']); //holding shift for finer control
+							document.getElementById('fireRange').value = (this.playerAngle+360)%360; //periodic boundary conditions as the slider represents an azimuthal angle
 						}
 						if(ekeys['ArrowRight']){
-							document.getElementById('fireRange').value -= -(3-2*ekeys['Shift']); //using += 1 instantly slides it all the way to max. why the heck?
+							this.playerAngle -= -(3-2*ekeys['Shift']); //using += 1 instantly slides it all the way to max. why the heck?
+							document.getElementById('fireRange').value = (this.playerAngle)%360;
 						}
 						if(ekeys[' ']){
 							this.fire();

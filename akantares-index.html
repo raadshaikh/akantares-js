@@ -37,12 +37,12 @@
 <body>
             
     <div id="canvas-container">
-		<div id='fireDiv' style='visibility: hidden; margin:0; padding:0'>
+		<div id='fireDiv' style='visibility: hidden; margin:0; padding:0; width: fit-content'>
 			Direction:
 			<input type="range" min="0" max="450" value="360" class="slider" id="fireRange" style='margin: 5px'>
 			<button id='fireButton' onclick='game.fire()' style='margin: 5px'>Go!</button>
 		</div>
-		<br>
+		<!-- <br> -->
         <canvas id="game-canvas" style='image-rendering: pixelated'></canvas>
 		<br><br>
 		<button id='zoomButton' onclick="window.keysBeingPressed['z']=true;" style='visibility:hidden'>Zoom</button>
@@ -109,7 +109,12 @@
 					window.audioContext.suspend();
 					game.gameState = 'escmenu';
 				}
-			});			
+			});
+			
+			function resizeSlider(){
+				document.getElementById('fireRange').style.width = document.getElementById('fireRange').getBoundingClientRect().width + gameCanvas.width - document.getElementById('fireDiv').getBoundingClientRect().width -10; //resizing firing slider and stuff to maintain the same width as the game canvas
+			}
+			document.addEventListener('orientationchange', resizeSlider());
     </script>
 </body>
 

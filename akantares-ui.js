@@ -240,8 +240,17 @@ THREE`.split('\n');
 						this.play_bgm('STARTSCREEN');
 						this.bgms_playing['STARTSCREEN'] = true;
 					}
-					this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240);
-					this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-28, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					// this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240); //old boring title screen graphic
+					this.drawString(52,92,'AKANTARES',4);
+					this.ctx.drawImage(this.bmps['TITLE'], 8, 32, 112, 8, 100, 140, 112, 8);
+					//UBER COOL-LOOKING ANIMATION THINGY!!!
+					for(let i=0; i<10; i++){
+						this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)), 1,1);
+						this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)+Math.PI), 1,1);
+					}
+					this.ctx.drawImage(this.bmps['PLANET'],0,0,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount)-16/2, 16,16);
+					this.ctx.drawImage(this.bmps['PLANET'],0,16,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount+Math.PI)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount+Math.PI)-16/2, 16,16);
+					this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-24, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					break;
 					
 				
@@ -384,7 +393,7 @@ THREE`.split('\n');
 						this.ctx.filter = 'none';
 					}
 					if(this.game.help){
-						this.drawString(0,window.height/2,"GOAL: Set your aim and fire at your opponent,   \n      while avoiding obstacles!\n      Remember, all objects on screen have gravity.\n\nPress ESC for pause menu.\nPress Z to toggle 2x zoom.\n\nAkantares (c) 2009, Studio Pixel\nBrowser version by IdioticBaka1824");
+						this.drawString(0,window.height/2,"GOAL: Set your aim and fire at your opponent,   \n      while avoiding obstacles!\n      Remember, all objects on screen have gravity.\n\nPress ESC for pause menu.\nPress Z to toggle 2x zoom.\n\nAkantares (c) 2009, Studio Pixel\nBrowser version and music by IdioticBaka1824");
 					}
 					break;
 					
@@ -393,7 +402,7 @@ THREE`.split('\n');
 			}
 			
 			if(('ontouchstart' in window) && this.game.gameState!='escmenu'){
-				this.ctx.globalAlpha = 0.1;
+				this.ctx.globalAlpha = 0.12;
 				// this.ctx.drawImage(this.bmps['PLANET'],0,32,16,16,0,0,32,32);
 				this.drawString(8,10,'Esc');
 				this.ctx.globalAlpha = 1;

@@ -207,12 +207,15 @@ THREE`.split('\n');
 				}
         }
 		
-		drawString(x, y, str, zoom=1){
+		drawString(x, y, str, zoom=1, align='left'){
+			let x_ = x;
+			let y_ = y;
+			if(align=='centre'){x_=x-str.length*6/2; y_=y-12/2;}
 			let newlines = [0];
 			for(let i=0; i<str.length; i++){
 				if(str[i]=='\n'){newlines.push(i);}
 				if(str.charCodeAt(i)>=0x20){
-					this.ctx.drawImage(this.bmps['FONT_1'], 8*((str.charCodeAt(i)-0x20)%32), 12*~~((str.charCodeAt(i)-0x20)/32), 8, 12, x+6*(i-newlines[newlines.length-1]-(newlines.length>1))*zoom, y+12*(newlines.length-1)*zoom -2, 8*zoom, 12*zoom); //~~ is shortcut for floor function somehow
+					this.ctx.drawImage(this.bmps['FONT_1'], 8*((str.charCodeAt(i)-0x20)%32), 12*~~((str.charCodeAt(i)-0x20)/32), 8, 12, x_+6*(i-newlines[newlines.length-1]-(newlines.length>1))*zoom, y_+12*(newlines.length-1)*zoom -2, 8*zoom, 12*zoom); //~~ is shortcut for floor function somehow
 				}
 			}
 		}
@@ -249,25 +252,31 @@ THREE`.split('\n');
 						this.ctx.stroke();
 					}
 					// this.ctx.drawImage(this.bmps['STARTSCREEN'], 0,0,320,240, 0,0,320,240); //old boring title screen graphic
-					this.drawString(52,92,'AKANTARES',4);
-					this.ctx.drawImage(this.bmps['TITLE'], 8, 32, 112, 8, 100, 140, 112, 8);
+					this.drawString(52,80,'AKANTARES',4);
+					this.ctx.drawImage(this.bmps['TITLE'], 8, 32, 112, 8, 100, 128, 112, 8);
 					//UBER COOL-LOOKING ANIMATION THINGY!!!
 					if(this.startscreenAnim == 0){
 						for(let i=0; i<10; i++){
-							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)), 1,1);
-							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-i*20)+Math.PI), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)), window.height/2-16+68*Math.sin(-0.01*(this.frameCount-i*20)), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-i*20)+Math.PI), window.height/2-16+68*Math.sin(-0.01*(this.frameCount-i*20)+Math.PI), 1,1);
 						}
 					}
 					//alternate animation
 					else{
 						for(let i=0; i<16; i++){
-							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)), 1,1);
-							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), window.height/2-4+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],43,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)), window.height/2-16+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)), 1,1);
+							this.ctx.drawImage(this.bmps['PLANET'],59,35,1,1, window.width/2+132*Math.cos(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), window.height/2-16+68*Math.sin(-0.01*(this.frameCount-this.frameCount%20-i*20)+Math.PI), 1,1);
 						}
 					}
-					this.ctx.drawImage(this.bmps['PLANET'],0,0,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount)-16/2, 16,16);
-					this.ctx.drawImage(this.bmps['PLANET'],0,16,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount+Math.PI)-16/2, window.height/2-4+68*Math.sin(-0.01*this.frameCount+Math.PI)-16/2, 16,16);
-					this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-24, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					this.ctx.drawImage(this.bmps['PLANET'],0,0,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount)-16/2, window.height/2-16+68*Math.sin(-0.01*this.frameCount)-16/2, 16,16);
+					this.ctx.drawImage(this.bmps['PLANET'],0,16,16,16, window.width/2+132*Math.cos(-0.01*this.frameCount+Math.PI)-16/2, window.height/2-16+68*Math.sin(-0.01*this.frameCount+Math.PI)-16/2, 16,16);
+					// this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-24, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
+					this.selectString = this.frameCount%20<10==0 ? '> ' : '- ';
+					this.drawString(window.width/2, window.height-36, (this.game.gameMode==0?this.selectString:'')+'Single Player', 1,'centre');
+					this.drawString(window.width/2, window.height-24, (this.game.gameMode==1?this.selectString:'')+'Multiplayer (Offline)', 1,'centre');
+						// this.ctx.filter = 'brightness(50%)';
+					// this.drawString(window.width/2, window.height-12, (this.game.gameMode==2?this.selectString:'')+'Multiplayer (Online)', 1,'centre');
+						// this.ctx.filter = 'none';
 					break;
 					
 				
@@ -296,7 +305,7 @@ THREE`.split('\n');
 						if(!(this.game.gameSubState=='collided' && h_i-m_i>=2)){this.ctx.drawImage(this.bmps['PLANET'], 0+(16+8*m_i)*(this.frameCount%6==0 && h_i>0),32+16*m_i, 16+8*m_i,16+8*m_i, this.game.planets[i].x-8-4*m_i, this.game.planets[i].y-8-4*m_i, 16+8*m_i,16+8*m_i);} //grey planets
 					}
 					
-					if(this.game.justStartedPlaying){
+					if(this.game.justStartedPlaying && this.game.gameMode==2){
 						let t = this.frameCount/(1.5*window.fps); //cool nameplate sliding up animation
 						t = Math.min(0.5+8*t,1);
 						this.ctx.drawImage(this.bmps['NAMEPLATE'], 0,0,64,t*24, this.game.playerPos.x-64/2, this.game.playerPos.y-16/2-t*24, 64,t*24)
@@ -313,7 +322,8 @@ THREE`.split('\n');
 							this.play_bgm('READY');
 							this.bgms_playing['READY'] = true;
 						}
-						this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Please Take your shot'+'.'.repeat(Math.abs(this.frameCount)/30%4));
+						if(this.game.gameMode == 0){this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Please Take your shot'+'.'.repeat(Math.abs(this.frameCount)/30%4));}
+						if(this.game.gameMode == 1){this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Player '+(1+this.game.whoseTurn).toString()+"'s turn"+'.'.repeat(Math.abs(this.frameCount)/30%4));}
 					}
 					
 					if(this.game.gameSubState == 'countdown'){
@@ -377,7 +387,7 @@ THREE`.split('\n');
 							this.play_bgm('GAMEOVER');
 							this.bgms_playing['GAMEOVER'] = true;
 						}
-						this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);
+						if(this.game.gameMode==0){this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);} //win, lose, draw images. only in single player
 						this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-20, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					}
 					

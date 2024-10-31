@@ -31,6 +31,9 @@
 	
     class Game {
         constructor() {
+			this.gameMode = 0; //0,1,2 = singleplayer, multiplayer offline, multiplayer online
+			this.numGameModes = 2; //no multiplayer online yet
+			this.whoseTurn = 0; //0,1 = player1 or player2
 			this.gameState = 'loading'; //loading, startscreen, playing, escmenu, gameover. actually, no startscreen or gameover
 			this.gameSubState = 'null'; //if gameState == 'playing', this can be 'ready', 'countdown', 'flying', 'collided', 'win','lose','draw'. otherwise it is 'null'.
 			this.level = 0;
@@ -45,8 +48,12 @@
 			this.dt = 0.05; //time step for integrating motion
 			this.G = 3000; //universal gravitational constant
 			this.initCatapultSpeed = 14;
+			this.playerMass = 0.5;
+			this.planetMass = 1; //sets the unit mass scale and is thus incorporated into the definition of G as well. do not change
+			this.bigPlanetMass = 2;
 			this.respiteFrames = 30; //# of frames at beginning when player gravity is disabled
 			this.fadeinDuration = 0.2;
+			this.resumeFrame = 0; //keep track of which frame you were on when paused, so that the game doesn't keep going in the background
 			
 			this.playerName = 'debugName';
 			// this.playerName = window.prompt('Name: ');
@@ -79,16 +86,21 @@
 		}
 		
 		fire(){
-			if(!this.justStartedPlaying){ //otherwise firing will cause the nameplates to re-popup
+			if(this.gameMode!=2 || !this.justStartedPlaying){ //otherwise firing will cause the nameplates to re-popup (nameplates only used in online mode)
 				ui.sfxs['OK'].play();
-				this.resultString = '';
-				this.resetStuff('trail');
-				this.resetStuff('shot');
 				
-				this.gameSubState = 'countdown';
-				ui.frameCount=0;
-				document.getElementById('fireRange').style.visibility = 'hidden';
-				document.getElementById('fireButton').disabled = true;
+				if(this.gameMode==0 || this.whoseTurn>0){
+					this.resultString = '';
+					this.resetStuff('trail');
+					this.resetStuff('shot');
+				
+					this.gameSubState = 'countdown';
+					ui.frameCount = 0;
+					document.getElementById('fireRange').style.visibility = 'hidden';
+					document.getElementById('fireButton').disabled = true;
+				}
+				this.whoseTurn = this.whoseTurn + 1;
+				ui.frameCount = 0;
 			}
 		}
 		
@@ -113,6 +125,7 @@
 					this.score = [0,0];
 					this.resetStuff('trail');
 					this.resetStuff('planets');
+					this.resetStuff('shot');
 					this.justStartedPlaying = true;
 					break;
 				
@@ -121,7 +134,7 @@
 					this.playerMissilePos.x = this.playerPos.x + 10*Math.cos(this.playerAngle*Math.PI/180);
 					this.playerMissileVel.y = this.initCatapultSpeed*Math.sin(this.playerAngle*Math.PI/180);
 					this.playerMissilePos.y = this.playerPos.y + 10*Math.sin(this.playerAngle*Math.PI/180);
-					this.enemyAngle = 360*Math.random();
+					if(this.gameMode==0){this.enemyAngle = 360*Math.random();}
 					this.enemyMissileVel.x = this.initCatapultSpeed*Math.cos(this.enemyAngle*Math.PI/180);
 					this.enemyMissilePos.x = this.enemyPos.x + 10*Math.cos(this.enemyAngle*Math.PI/180);
 					this.enemyMissileVel.y = this.initCatapultSpeed*Math.sin(this.enemyAngle*Math.PI/180);
@@ -131,6 +144,7 @@
 					this.enemyPos.h = false;
 					this.playerCollided = false;
 					this.enemyCollided = false;
+					this.whoseTurn = 0;
 					
 					if(this.resultString.slice(-3)=='hit'){this.resetStuff('planets');}
 					this.planets = this.planets.filter((p)=>p.h-p.m<2);
@@ -170,7 +184,8 @@
 					switch(this.gameSubState){
 						
 						case 'ready':
-							this.playerAngle = document.getElementById('fireRange').value;
+							if(this.whoseTurn==0){this.playerAngle = document.getElementById('fireRange').value;}
+							else if(this.whoseTurn==1){this.enemyAngle = document.getElementById('fireRange').value;}
 							break;
 							
 						case 'countdown':
@@ -184,14 +199,13 @@
 						case 'flying':
 						
 							//player missile movement
-							//bigger planets are treated twice as heavy
 							if(!this.playerCollided){
 								this.playerMissileAcc.x = 0;
 								//respite frames disable the effect of gravity of the player for a bit at the beginning so that the catapult doesn't just get stuck orbiting the player
-								if(ui.frameCount>this.respiteFrames) {this.playerMissileAcc.x -= this.G*(this.playerMissilePos.x-this.playerPos.x)*dist2(this.playerMissilePos.x-this.playerPos.x, this.playerMissilePos.y-this.playerPos.y, 10)**-3;} //the dz=10 is to make sure it's always some distance away from the planet, to avoid singularities
-								this.playerMissileAcc.x -= this.G*(this.playerMissilePos.x-this.enemyPos.x)*dist2(this.playerMissilePos.x-this.enemyPos.x, this.playerMissilePos.y-this.enemyPos.y, 10)**-3;
+								if(ui.frameCount>this.respiteFrames) {this.playerMissileAcc.x -= this.G*this.playerMass*(this.playerMissilePos.x-this.playerPos.x)*dist2(this.playerMissilePos.x-this.playerPos.x, this.playerMissilePos.y-this.playerPos.y, 10)**-3;} //the dz=10 is to make sure it's always some distance away from the planet, to avoid singularities
+								this.playerMissileAcc.x -= this.G*this.playerMass*(this.playerMissilePos.x-this.enemyPos.x)*dist2(this.playerMissilePos.x-this.enemyPos.x, this.playerMissilePos.y-this.enemyPos.y, 10)**-3;
 								for(let i=0; i<this.planets.length; i++){
-									this.playerMissileAcc.x -= this.G*(1+this.planets[i].m)*(this.playerMissilePos.x-this.planets[i].x)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+									this.playerMissileAcc.x -= this.G*(this.planets[i].m==0?this.planetMass:this.bigPlanetMass)*(this.playerMissilePos.x-this.planets[i].x)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 								}
 								this.playerMissileVel.x += this.dt*this.playerMissileAcc.x;
 								this.playerMissilePos.x += this.dt*this.playerMissileVel.x;
@@ -200,7 +214,7 @@
 								if(ui.frameCount>this.respiteFrames) {this.playerMissileAcc.y -= this.G*(this.playerMissilePos.y-this.playerPos.y)*dist2(this.playerMissilePos.x-this.playerPos.x, this.playerMissilePos.y-this.playerPos.y, 10)**-3;}
 								this.playerMissileAcc.y -= this.G*(this.playerMissilePos.y-this.enemyPos.y)*dist2(this.playerMissilePos.x-this.enemyPos.x, this.playerMissilePos.y-this.enemyPos.y, 10)**-3;
 								for(let i=0; i<this.planets.length; i++){
-									this.playerMissileAcc.y -= this.G*(1+this.planets[i].m)*(this.playerMissilePos.y-this.planets[i].y)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+									this.playerMissileAcc.y -= this.G*(this.planets[i].m==0?this.planetMass:this.bigPlanetMass)*(this.playerMissilePos.y-this.planets[i].y)*dist2(this.playerMissilePos.x-this.planets[i].x, this.playerMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 								}
 								this.playerMissileVel.y += this.dt*this.playerMissileAcc.y;
 								this.playerMissilePos.y += this.dt*this.playerMissileVel.y;
@@ -208,19 +222,19 @@
 							//enemy missile movement
 							if(!this.enemyCollided){
 								this.enemyMissileAcc.x = 0;
-								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.x -= this.G*(this.enemyMissilePos.x-this.enemyPos.x)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
-								this.enemyMissileAcc.x -= this.G*(this.enemyMissilePos.x-this.playerPos.x)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
+								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.x -= this.G*this.playerMass*(this.enemyMissilePos.x-this.enemyPos.x)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
+								this.enemyMissileAcc.x -= this.G*this.playerMass*(this.enemyMissilePos.x-this.playerPos.x)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
 								for(let i=0; i<this.planets.length; i++){
-									this.enemyMissileAcc.x -= this.G*(1+this.planets[i].m)*(this.enemyMissilePos.x-this.planets[i].x)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+									this.enemyMissileAcc.x -= this.G*(this.planets[i].m==0?this.planetMass:this.bigPlanetMass)*(this.enemyMissilePos.x-this.planets[i].x)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 								}
 								this.enemyMissileVel.x += this.dt*this.enemyMissileAcc.x;
 								this.enemyMissilePos.x += this.dt*this.enemyMissileVel.x;
 								
 								this.enemyMissileAcc.y = 0;
-								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.y -= this.G*(this.enemyMissilePos.y-this.enemyPos.y)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
-								this.enemyMissileAcc.y -= this.G*(this.enemyMissilePos.y-this.playerPos.y)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
+								if(ui.frameCount>this.respiteFrames) {this.enemyMissileAcc.y -= this.G*this.playerMass*(this.enemyMissilePos.y-this.enemyPos.y)*dist2(this.enemyMissilePos.x-this.enemyPos.x, this.enemyMissilePos.y-this.enemyPos.y, 10)**-3;}
+								this.enemyMissileAcc.y -= this.G*this.playerMass*(this.enemyMissilePos.y-this.playerPos.y)*dist2(this.enemyMissilePos.x-this.playerPos.x, this.enemyMissilePos.y-this.playerPos.y, 10)**-3;
 								for(let i=0; i<this.planets.length; i++){
-									this.enemyMissileAcc.y -= this.G*(1+this.planets[i].m)*(this.enemyMissilePos.y-this.planets[i].y)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
+									this.enemyMissileAcc.y -= this.G*(this.planets[i].m==0?this.planetMass:this.bigPlanetMass)*(this.enemyMissilePos.y-this.planets[i].y)*dist2(this.enemyMissilePos.x-this.planets[i].x, this.enemyMissilePos.y-this.planets[i].y, 10+4*this.planets[i].m)**-3;
 								}
 								this.enemyMissileVel.y += this.dt*this.enemyMissileAcc.y;
 								this.enemyMissilePos.y += this.dt*this.enemyMissileVel.y;
@@ -354,8 +368,9 @@
 				ekeys['z'] = false;
 			}
 			if(ekeys['Escape']){
-				if(this.gameState != 'escmenu'){
+				if(this.gameState != 'escmenu' && this.gameMode != 2){ //can't pause when already paused, and can't pause online games
 					window.audioContext.suspend();
+					this.resumeFrame = ui.frameCount;
 					this.gameState = 'escmenu';
 					ekeys['Escape'] = false;
 				}
@@ -372,13 +387,25 @@
 					}
 					break;
 				case 'startscreen':
+					if(ekeys['ArrowUp']){
+						this.gameMode = (this.gameMode + this.numGameModes-1)%this.numGameModes; //+3-1 because just doing -1 leads to negative results for the modulo function
+						ui.sfxs['SELECT'].play();
+						ekeys['ArrowUp'] = false;
+					}
+					if(ekeys['ArrowDown']){
+						this.gameMode = (this.gameMode + 1)%this.numGameModes;
+						ui.sfxs['SELECT'].play();
+						ekeys['ArrowDown'] = false;
+					}
 					if(ekeys[' ']){
 						ekeys[' ']=false;
 						this.resetStuff('gameover');
 						window.audioContext.resume();
+						ui.sfxs['OK'].play();
 						this.gameState = 'playing';
 						this.gameSubState = 'ready';
 						this.previousGameState = 'playing';
+						ui.frameCount = -this.fadeinDuration*window.fps; //fade-in animation
 					}
 					break;
 				
@@ -386,15 +413,28 @@
 					
 					if(this.gameSubState == 'ready'){
 						if(ekeys['ArrowLeft']){
-							this.playerAngle -= (3-2*ekeys['Shift']); //holding shift for finer control
-							document.getElementById('fireRange').value = (this.playerAngle+360)%360; //periodic boundary conditions as the slider represents an azimuthal angle
+							if(this.whoseTurn == 0){
+								this.playerAngle -= (3-2*ekeys['Shift']); //holding shift for finer control
+								document.getElementById('fireRange').value = (this.playerAngle+360)%360; //periodic boundary conditions as the slider represents an azimuthal angle
+							}
+							else if(this.whoseTurn == 1){
+								this.enemyAngle -= (3-2*ekeys['Shift']);
+								document.getElementById('fireRange').value = (this.enemyAngle+360)%360;
+							}
 						}
 						if(ekeys['ArrowRight']){
-							this.playerAngle -= -(3-2*ekeys['Shift']); //using += 1 instantly slides it all the way to max. why the heck?
-							document.getElementById('fireRange').value = (this.playerAngle)%360;
+							if(this.whoseTurn == 0){
+								this.playerAngle -= -(3-2*ekeys['Shift']); //using += 1 instantly slides it all the way to max. why the heck?
+								document.getElementById('fireRange').value = (this.playerAngle+360)%360;
+							}
+							else if(this.whoseTurn == 1){
+								this.enemyAngle -= -(3-2*ekeys['Shift']);
+								document.getElementById('fireRange').value = (this.enemyAngle+360)%360;
+							}
 						}
 						if(ekeys[' ']){
 							this.fire();
+							ekeys[' '] = false;
 						}
 					}
 					
@@ -422,6 +462,7 @@
 				case 'escmenu':
 					if(ekeys['f']){
 						window.audioContext.resume();
+						ui.frameCount = this.resumeFrame;
 						this.gameState = this.previousGameState;
 					}
 					if(ekeys['g']){

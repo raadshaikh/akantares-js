@@ -101,7 +101,8 @@
 			}
 			
 			document.addEventListener('input', (e) => {
-				game.playerAngle = document.getElementById('fireRange').value;
+				if(game.whoseTurn==0){game.playerAngle = document.getElementById('fireRange').value;}
+				else if(game.whoseTurn==1){game.enemyAngle = document.getElementById('fireRange').value;}
             }, true);
 			
 			document.addEventListener('visibilitychange', function() {

@@ -210,7 +210,7 @@ THREE`.split('\n');
 		drawString(x, y, str, zoom=1, align='left'){
 			let x_ = x;
 			let y_ = y;
-			if(align=='centre'){x_=x-str.length*6/2; y_=y-12/2;}
+			if(align=='centre'){x_=x-zoom*str.length*6/2; y_=y-zoom*12/2;}
 			let newlines = [0];
 			for(let i=0; i<str.length; i++){
 				if(str[i]=='\n'){newlines.push(i);}
@@ -323,7 +323,7 @@ THREE`.split('\n');
 							this.bgms_playing['READY'] = true;
 						}
 						if(this.game.gameMode == 0){this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Please Take your shot'+'.'.repeat(Math.abs(this.frameCount)/30%4));}
-						if(this.game.gameMode == 1){this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Player '+(1+this.game.whoseTurn).toString()+"'s turn"+'.'.repeat(Math.abs(this.frameCount)/30%4));}
+						if(this.game.gameMode > 0){this.drawString(14, 218 + (20-2*this.frameCount)*(this.frameCount<0.2*window.fps), 'Player '+(1+this.game.whoseTurn).toString()+"'s turn"+'.'.repeat(Math.abs(this.frameCount)/30%4));}
 					}
 					
 					if(this.game.gameSubState == 'countdown'){
@@ -387,7 +387,11 @@ THREE`.split('\n');
 							this.play_bgm('GAMEOVER');
 							this.bgms_playing['GAMEOVER'] = true;
 						}
-						if(this.game.gameMode==0){this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);} //win, lose, draw images. only in single player
+						if(this.game.gameMode==0 || this.game.gameSubState=='draw'){this.ctx.drawImage(this.bmps['RESULT'], 0, 72+40*(this.game.gameSubState=='lose')+80*(this.game.gameSubState=='draw'), 112, 40, window.width/2-112/2, window.height/2-40/2, 112, 40);} //win, lose, draw images. only in single player
+						if(this.game.gameMode>0){ //2player mode. the 'win' and 'lose' strings are recycled to mean player1 win and player2 win respectively.
+							if(this.game.gameSubState=='win'){this.drawString(window.width/2, window.height/2, 'Player 1 win!', 2, 'centre');}
+							if(this.game.gameSubState=='lose'){this.drawString(window.width/2, window.height/2, 'Player 2 win!', 2, 'centre');}
+						}
 						this.drawString(126-6*(this.pushSpace.length-10)/2, window.height-20, this.pushSpace+'.'.repeat(Math.abs(this.frameCount)/30%4));
 					}
 					

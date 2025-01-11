@@ -172,6 +172,7 @@ THREE`.split('\n');
 			'f': false,
 			'g': false,
 			'k': false,
+			'z': false,
 			};
         }
         
